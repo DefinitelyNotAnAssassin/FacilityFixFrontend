@@ -564,6 +564,7 @@ class _WorkOrderDetailsState extends State<WorkOrderDetailsPage> {
       assessedAt: w.assessedAt,
       assessment: w.assessment,
       staffAttachments: w.staffAttachments,
+      isStaff: true,
     );
   }
 

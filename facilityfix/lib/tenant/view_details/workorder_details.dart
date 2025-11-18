@@ -38,6 +38,7 @@ class _WorkOrderDetailsState extends State<WorkOrderDetailsPage> {
   String? _errorMessage;
   bool _navigatedToConcernSlip = false;
   bool _navigatedToJobService = false;
+  bool _isMarkingComplete = false;
 
   final APIService _apiService = APIService();
 
@@ -467,6 +468,85 @@ class _WorkOrderDetailsState extends State<WorkOrderDetailsPage> {
       );
   }
 
+  Future<void> _markAsCompleted() async {
+    final w = widget.workOrder ?? _fetchedWorkOrder;
+    if (w == null) return;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Mark as Completed'),
+            content: const Text(
+              'Are you sure you want to mark this work order as completed? This action will notify the admin and update the status.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.green),
+                child: const Text('Mark Complete'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isMarkingComplete = true);
+
+    try {
+      final id = w.id.toUpperCase();
+      final idLower = w.id.toLowerCase();
+
+      if (id.startsWith('CS-') || idLower.startsWith('cs_')) {
+        await _apiService.markConcernSlipCompleted(
+          concernSlipId: w.id,
+          completionNotes: 'Marked as completed by tenant on ${DateTime.now()}',
+        );
+      } else if (id.startsWith('JS-') || idLower.startsWith('js_')) {
+        await _apiService.markJobServiceCompleted(
+          jobServiceId: w.id,
+          completionNotes: 'Marked as completed by tenant on ${DateTime.now()}',
+        );
+      } else if (id.startsWith('WP-') || idLower.startsWith('wp_')) {
+        await _apiService.markWorkOrderCompleted(
+          workOrderId: w.id,
+          completionNotes: 'Marked as completed by tenant on ${DateTime.now()}',
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Work marked as completed successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Refresh the details
+        _fetchWorkOrderData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to mark as completed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isMarkingComplete = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final w = widget.workOrder ?? _fetchedWorkOrder;
@@ -478,6 +558,12 @@ class _WorkOrderDetailsState extends State<WorkOrderDetailsPage> {
         status == 'complete' ||
         status == 'completed' ||
         status == 'done';
+    final isCompletionEligible =
+        status == 'assigned' ||
+        status == 'to inspect' ||
+        status == 'inspected' ||
+        status == 'in progress' ||
+        status == 'approved';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -498,7 +584,51 @@ class _WorkOrderDetailsState extends State<WorkOrderDetailsPage> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-          child: _buildTabContent(),
+          child: Column(
+            children: [
+              _buildTabContent(),
+              if (isCompletionEligible)
+                Padding(
+                  padding: const EdgeInsets.only(top: 24.0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isMarkingComplete ? null : _markAsCompleted,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon:
+                          _isMarkingComplete
+                              ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                              : const Icon(Icons.check_circle),
+                      label: Text(
+                        _isMarkingComplete
+                            ? 'Marking Complete...'
+                            : 'Mark as Completed',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: NavBar(

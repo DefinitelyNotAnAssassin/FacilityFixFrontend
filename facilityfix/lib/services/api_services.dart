@@ -729,19 +729,72 @@ class APIService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final result = jsonDecode(response.body) as Map<String, dynamic>;
 
-        // upload files to firebase storage
+        if (attachments.isNotEmpty) {
+          final attachmentUrls = <String>[];
 
-        for (final file in attachments) {
-          final uploadResponse = await uploadMultipartFile(
-            path: '/files/upload',
-            file: file,
-            fields: {
-              'entity_type': 'concern_slips',
-              'entity_id': result['id'],
-              'file_type': 'any',
-              if (description != null) 'description': description,
-            },
-          );
+          // Upload each file
+          for (final file in attachments) {
+            try {
+              final uploadResponse = await uploadMultipartFile(
+                path: '/files/upload',
+                file: file,
+                fields: {
+                  'entity_type': 'concern_slips',
+                  'entity_id': result['id'],
+                  'file_type': 'any',
+                  if (description != null) 'description': description,
+                },
+              );
+              print('[API] File uploaded successfully: $uploadResponse');
+            } catch (e) {
+              print('[API] Error uploading file: $e');
+            }
+          }
+
+          // Now retrieve the list of files for this concern slip to get the URLs
+          try {
+            final listResponse = await get(
+              '/files/list/concern_slips/${result['id']}',
+              headers: _authHeaders(token),
+            );
+
+            if (listResponse.statusCode >= 200 &&
+                listResponse.statusCode < 300) {
+              final listData =
+                  jsonDecode(listResponse.body) as Map<String, dynamic>;
+              final files = listData['files'] as List<dynamic>? ?? [];
+
+              // Extract file URLs
+              for (final file in files) {
+                if (file is Map<String, dynamic> && file.containsKey('url')) {
+                  attachmentUrls.add(file['url'] as String);
+                }
+              }
+
+              // Update the concern slip with attachment URLs
+              if (attachmentUrls.isNotEmpty) {
+                final updateResponse = await put(
+                  '/concern-slips/${result['id']}',
+                  headers: _authHeaders(token),
+                  body: jsonEncode({'attachments': attachmentUrls}),
+                );
+
+                if (updateResponse.statusCode >= 200 &&
+                    updateResponse.statusCode < 300) {
+                  print(
+                    '[API] Concern slip updated with ${attachmentUrls.length} attachments',
+                  );
+                  result['attachments'] = attachmentUrls;
+                } else {
+                  print(
+                    '[API] Failed to update concern slip with attachments: ${updateResponse.statusCode}',
+                  );
+                }
+              }
+            }
+          } catch (e) {
+            print('[API] Error retrieving file URLs: $e');
+          }
         }
         // Generate formatted ID if not provided
         if (!result.containsKey('formatted_id') && result.containsKey('id')) {
@@ -4181,6 +4234,99 @@ class APIService {
     } catch (e) {
       print('Error creating test notification: $e');
       return false;
+    }
+  }
+
+  Future<Map<String, dynamic>> markWorkOrderCompleted({
+    required String workOrderId,
+    String? completionNotes,
+  }) async {
+    try {
+      await _refreshRoleLabelFromToken();
+      final token = await _requireToken();
+
+      final body = <String, dynamic>{};
+      if (completionNotes != null) body['completion_notes'] = completionNotes;
+
+      final response = await http.patch(
+        _u('/work-order-permits/$workOrderId/complete'),
+        headers: _authHeaders(token),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        final errorBody = _tryDecode(response.body);
+        throw Exception(
+          'Failed to mark work order as completed: ${errorBody['detail'] ?? response.body}',
+        );
+      }
+    } catch (e) {
+      print('Error marking work order as completed: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> markConcernSlipCompleted({
+    required String concernSlipId,
+    String? completionNotes,
+  }) async {
+    try {
+      await _refreshRoleLabelFromToken();
+      final token = await _requireToken();
+
+      final body = <String, dynamic>{};
+      if (completionNotes != null) body['completion_notes'] = completionNotes;
+
+      final response = await http.patch(
+        _u('/concern-slips/$concernSlipId/complete'),
+        headers: _authHeaders(token),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        final errorBody = _tryDecode(response.body);
+        throw Exception(
+          'Failed to mark concern slip as completed: ${errorBody['detail'] ?? response.body}',
+        );
+      }
+    } catch (e) {
+      print('Error marking concern slip as completed: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> markJobServiceCompleted({
+    required String jobServiceId,
+    String? completionNotes,
+  }) async {
+    try {
+      await _refreshRoleLabelFromToken();
+      final token = await _requireToken();
+
+      final body = <String, dynamic>{};
+      if (completionNotes != null) body['completion_notes'] = completionNotes;
+
+      final response = await http.patch(
+        _u('/job-services/$jobServiceId/complete'),
+        headers: _authHeaders(token),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        final errorBody = _tryDecode(response.body);
+        throw Exception(
+          'Failed to mark job service as completed: ${errorBody['detail'] ?? response.body}',
+        );
+      }
+    } catch (e) {
+      print('Error marking job service as completed: $e');
+      rethrow;
     }
   }
 }

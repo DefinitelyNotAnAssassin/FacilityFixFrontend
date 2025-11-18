@@ -1,4 +1,5 @@
 import 'package:facilityfix/services/api_services.dart';
+import 'package:facilityfix/services/chat_helper.dart';
 import 'package:facilityfix/tenant/announcement.dart';
 import 'package:facilityfix/tenant/home.dart';
 import 'package:facilityfix/tenant/profile.dart';
@@ -299,6 +300,9 @@ class _TenantConcernSlipDetailPageState
     );
     final isPending = status.startsWith('pending');
     final isComplete = status.contains('complete') || status == 'done';
+    final isAssigned =
+        _concernSlipData?['assigned_to'] != null ||
+        _concernSlipData?['assigned_to_name'] != null;
 
     return Scaffold(
       backgroundColor: Colors.white,

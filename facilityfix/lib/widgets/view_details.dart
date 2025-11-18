@@ -334,14 +334,16 @@ class ConcernSlipDetails extends StatelessWidget {
 
                 if ((attachments?.isNotEmpty ?? false)) ...[
                   SizedBox(height: 12 * s),
-                  const _SectionTitle('Attachments'),
+                  const _SectionTitle('Tenant Attachments'),
                   SizedBox(height: 8 * s),
 
                   Wrap(
                     spacing: 8 * s,
                     runSpacing: 8 * s,
                     children:
-                        attachments!.map((u) => Image.network(u)).toList(),
+                        attachments!
+                            .map((u) => _thumb(u, h: 80 * s, w: 140 * s))
+                            .toList(),
                   ),
                 ],
               ],
@@ -410,20 +412,10 @@ class ConcernSlipDetails extends StatelessWidget {
                     SizedBox(height: 8 * s),
                   ],
 
-                  // Staff recommendation
-                  if ((staffRecommendation?.trim().isNotEmpty ?? false)) ...[
-                    _SectionCard(
-                      title: 'Recommendation',
-                      content: staffRecommendation!.trim(),
-                      padding: EdgeInsets.all(14 * s),
-                      hideIfEmpty: false,
-                    ),
-                    SizedBox(height: 8 * s),
-                  ],
-
                   // Staff attachments
                   if ((staffAttachments?.isNotEmpty ?? false)) ...[
-                    const _SectionTitle('Attachments'),
+                    SizedBox(height: 12 * s),
+                    const _SectionTitle('Staff Assessment Attachments'),
                     SizedBox(height: 8 * s),
                     Wrap(
                       spacing: 8 * s,
@@ -433,6 +425,18 @@ class ConcernSlipDetails extends StatelessWidget {
                               .map((u) => _thumb(u, h: 80 * s, w: 140 * s))
                               .toList(),
                     ),
+                    SizedBox(height: 8 * s),
+                  ],
+
+                  // Staff recommendation
+                  if ((staffRecommendation?.trim().isNotEmpty ?? false)) ...[
+                    _SectionCard(
+                      title: 'Recommendation',
+                      content: staffRecommendation!.trim(),
+                      padding: EdgeInsets.all(14 * s),
+                      hideIfEmpty: false,
+                    ),
+                    SizedBox(height: 8 * s),
                   ],
                 ],
               ),
@@ -523,6 +527,7 @@ class JobServiceDetails extends StatelessWidget {
 
     // Callbacks
     this.onViewConcernSlip,
+    required bool isStaff,
   });
 
   // Map resolution type to what we DISPLAY as "Request Type".
@@ -1523,8 +1528,9 @@ class MaintenanceDetails extends StatefulWidget {
   final Function(Map<String, dynamic>)? onInventoryItemTap;
   final String? currentStaffId;
   final String? taskCategory;
-  final Function(Map<String, dynamic>, String)? onInventoryAction; // action: 'receive' or 'request'
-  
+  final Function(Map<String, dynamic>, String)?
+  onInventoryAction; // action: 'receive' or 'request'
+
   // Action callbacks
   final VoidCallback? onHold;
   final VoidCallback? onCreateAssessment;
@@ -1628,19 +1634,30 @@ class _MaintenanceState extends State<MaintenanceDetails> {
     // First, try the staff-visible endpoint for inventory requests tied to the maintenance task.
     try {
       print('DEBUG: Loading inventory requests for task $taskId');
-      final respRequests = await apiService.getInventoryRequestsByMaintenanceTask(taskId.toString());
+      final respRequests = await apiService
+          .getInventoryRequestsByMaintenanceTask(taskId.toString());
       if (respRequests['success'] == true && respRequests['data'] != null) {
         final requests = List<Map<String, dynamic>>.from(respRequests['data']);
         // Enrich with item details
         for (var r in requests) {
           if (r['inventory_id'] != null) {
             try {
-              final itemData = await apiService.getInventoryItemById(r['inventory_id']);
+              final itemData = await apiService.getInventoryItemById(
+                r['inventory_id'],
+              );
               if (itemData != null) {
-                r['item_name'] = itemData['item_name'] ?? itemData['name'] ?? '';
-                r['item_code'] = itemData['item_code'] ?? itemData['code'] ?? '';
-                r['stock_quantity'] = itemData['available_stock'] ?? itemData['stock'] ?? itemData['current_stock'] ?? itemData['stock_quantity'] ?? 'N/A';
-                r['stock_status'] = itemData['status'] ?? itemData['stock_status'] ?? 'Unknown';
+                r['item_name'] =
+                    itemData['item_name'] ?? itemData['name'] ?? '';
+                r['item_code'] =
+                    itemData['item_code'] ?? itemData['code'] ?? '';
+                r['stock_quantity'] =
+                    itemData['available_stock'] ??
+                    itemData['stock'] ??
+                    itemData['current_stock'] ??
+                    itemData['stock_quantity'] ??
+                    'N/A';
+                r['stock_status'] =
+                    itemData['status'] ?? itemData['stock_status'] ?? 'Unknown';
               }
             } catch (e) {
               print('DEBUG: Error loading item details for request: $e');
@@ -1656,7 +1673,9 @@ class _MaintenanceState extends State<MaintenanceDetails> {
           setState(() {
             _inventoryRequests = requests;
           });
-          print('DEBUG: Loaded ${_inventoryRequests.length} inventory requests');
+          print(
+            'DEBUG: Loaded ${_inventoryRequests.length} inventory requests',
+          );
           return; // data found, no need to check reservations
         }
       }
@@ -1667,21 +1686,35 @@ class _MaintenanceState extends State<MaintenanceDetails> {
 
     // If no requests found, check if there are admin reservations for this task
     try {
-      print('DEBUG: Checking for admin inventory reservations for task $taskId');
+      print(
+        'DEBUG: Checking for admin inventory reservations for task $taskId',
+      );
       final adminApiService = APIService(roleOverride: AppRole.admin);
-      final response = await adminApiService.getInventoryReservations(maintenanceTaskId: taskId);
+      final response = await adminApiService.getInventoryReservations(
+        maintenanceTaskId: taskId,
+      );
       if (response['success'] == true && response['data'] != null) {
         final reservations = List<Map<String, dynamic>>.from(response['data']);
         // Enrich with item details
         for (var r in reservations) {
           if (r['inventory_id'] != null) {
             try {
-              final itemData = await apiService.getInventoryItemById(r['inventory_id']);
+              final itemData = await apiService.getInventoryItemById(
+                r['inventory_id'],
+              );
               if (itemData != null) {
-                r['item_name'] = itemData['item_name'] ?? itemData['name'] ?? '';
-                r['item_code'] = itemData['item_code'] ?? itemData['code'] ?? '';
-                r['stock_quantity'] = itemData['available_stock'] ?? itemData['stock'] ?? itemData['current_stock'] ?? itemData['stock_quantity'] ?? 'N/A';
-                r['stock_status'] = itemData['status'] ?? itemData['stock_status'] ?? 'Unknown';
+                r['item_name'] =
+                    itemData['item_name'] ?? itemData['name'] ?? '';
+                r['item_code'] =
+                    itemData['item_code'] ?? itemData['code'] ?? '';
+                r['stock_quantity'] =
+                    itemData['available_stock'] ??
+                    itemData['stock'] ??
+                    itemData['current_stock'] ??
+                    itemData['stock_quantity'] ??
+                    'N/A';
+                r['stock_status'] =
+                    itemData['status'] ?? itemData['stock_status'] ?? 'Unknown';
               }
             } catch (e) {
               print('DEBUG: Error loading item details for reservation: $e');
@@ -1694,9 +1727,12 @@ class _MaintenanceState extends State<MaintenanceDetails> {
             r['type'] = 'reservation';
           }
           setState(() {
-            _inventoryRequests = reservations; // Show reservations as requests in UI
+            _inventoryRequests =
+                reservations; // Show reservations as requests in UI
           });
-          print('DEBUG: Loaded ${reservations.length} admin inventory reservations for staff view');
+          print(
+            'DEBUG: Loaded ${reservations.length} admin inventory reservations for staff view',
+          );
         }
       }
     } catch (e) {
@@ -1704,14 +1740,22 @@ class _MaintenanceState extends State<MaintenanceDetails> {
     }
   }
 
-  Future<void> _handleInventoryAction(Map<String, dynamic> request, String action) async {
-    final requestId = request['_doc_id'] ?? request['id'] ?? request['_id'] ?? request['request_id'] ?? request['reservation_id'];
+  Future<void> _handleInventoryAction(
+    Map<String, dynamic> request,
+    String action,
+  ) async {
+    final requestId =
+        request['_doc_id'] ??
+        request['id'] ??
+        request['_id'] ??
+        request['request_id'] ??
+        request['reservation_id'];
     if (requestId == null) {
       print('DEBUG: Request keys: ${request.keys.toList()}');
       print('DEBUG: Request map: $request');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Request ID not found')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Request ID not found')));
       return;
     }
 
@@ -1724,11 +1768,15 @@ class _MaintenanceState extends State<MaintenanceDetails> {
           final response = await apiService.markReservationReceived(requestId);
           if (response['success'] == true) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Reservation marked as received successfully')),
+              const SnackBar(
+                content: Text('Reservation marked as received successfully'),
+              ),
             );
             await _loadInventoryRequests();
           } else {
-            throw Exception(response['message'] ?? 'Failed to mark reservation as received');
+            throw Exception(
+              response['message'] ?? 'Failed to mark reservation as received',
+            );
           }
         } else {
           // Update request status to 'received' and deduct stock
@@ -1752,14 +1800,15 @@ class _MaintenanceState extends State<MaintenanceDetails> {
         final result = await showModalBottomSheet<RequestResult>(
           context: context,
           isScrollControlled: true,
-          builder: (ctx) => RequestItem(
-            itemName: request['item_name'] ?? 'Unknown Item',
-            itemId: request['inventory_id'] ?? '',
-            unit: request['unit'] ?? 'pcs',
-            stock: request['stock_quantity']?.toString() ?? '0',
-            maintenanceId: widget.id,
-            staffName: widget.assignedStaff ?? 'Unknown Staff',
-          ),
+          builder:
+              (ctx) => RequestItem(
+                itemName: request['item_name'] ?? 'Unknown Item',
+                itemId: request['inventory_id'] ?? '',
+                unit: request['unit'] ?? 'pcs',
+                stock: request['stock_quantity']?.toString() ?? '0',
+                maintenanceId: widget.id,
+                staffName: widget.assignedStaff ?? 'Unknown Staff',
+              ),
         );
 
         if (result != null) {
@@ -1770,7 +1819,9 @@ class _MaintenanceState extends State<MaintenanceDetails> {
             inventoryId: itemId,
             buildingId: 'default_building_id',
             quantityRequested: quantity,
-            purpose: result.notes ?? 'Additional request for maintenance task ${widget.id}',
+            purpose:
+                result.notes ??
+                'Additional request for maintenance task ${widget.id}',
             requestedBy: widget.currentStaffId ?? '',
             maintenanceTaskId: widget.id,
             status: 'pending',
@@ -1781,15 +1832,17 @@ class _MaintenanceState extends State<MaintenanceDetails> {
               const SnackBar(content: Text('Request created successfully')),
             );
             // Navigate to the new request details
-            final newRequestId = response['data']['id'] ?? response['data']['_doc_id'];
+            final newRequestId =
+                response['data']['id'] ?? response['data']['_doc_id'];
             if (newRequestId != null) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => InventoryDetails(
-                    selectedTabLabel: 'inventory request',
-                    requestId: newRequestId,
-                  ),
+                  builder:
+                      (_) => InventoryDetails(
+                        selectedTabLabel: 'inventory request',
+                        requestId: newRequestId,
+                      ),
                 ),
               );
             }
@@ -1801,9 +1854,9 @@ class _MaintenanceState extends State<MaintenanceDetails> {
       }
     } catch (e) {
       print('Error handling inventory action: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -1863,7 +1916,7 @@ class _MaintenanceState extends State<MaintenanceDetails> {
           // Basic info
           _Section(
             child: Column(
-                children: [
+              children: [
                 KeyValueRow.text(
                   label: 'Date Created',
                   valueText: _relativeOrFullDT(widget.createdAt),
@@ -1876,39 +1929,39 @@ class _MaintenanceState extends State<MaintenanceDetails> {
                 if ((widget.location ?? '').trim().isNotEmpty) ...[
                   const SizedBox(height: 8),
                   KeyValueRow.text(
-                  label: 'Location',
-                  valueText: widget.location!.trim(),
+                    label: 'Location',
+                    valueText: widget.location!.trim(),
                   ),
                 ],
                 if ((widget.departmentTag ?? '').trim().isNotEmpty) ...[
                   const SizedBox(height: 8),
                   KeyValueRow(
-                  label: 'Department',
-                  value: DepartmentTag(widget.departmentTag!.trim()),
+                    label: 'Department',
+                    value: DepartmentTag(widget.departmentTag!.trim()),
                   ),
                 ],
                 if ((widget.priority ?? '').trim().isNotEmpty) ...[
                   const SizedBox(height: 8),
                   KeyValueRow(
-                  label: 'Priority',
-                  value: PriorityTag(priority: widget.priority!.trim()),
+                    label: 'Priority',
+                    value: PriorityTag(priority: widget.priority!.trim()),
                   ),
                 ],
                 if ((widget.scheduleDate ?? '').trim().isNotEmpty) ...[
                   const SizedBox(height: 8),
                   KeyValueRow.text(
-                  label: 'Recurrence',
-                  valueText: _relativeOrFullDT(
-                    DateTime.tryParse(widget.scheduleDate!.trim()) ??
-                      UiDateUtils.parse(widget.scheduleDate!.trim()),
-                  ),
+                    label: 'Recurrence',
+                    valueText: _relativeOrFullDT(
+                      DateTime.tryParse(widget.scheduleDate!.trim()) ??
+                          UiDateUtils.parse(widget.scheduleDate!.trim()),
+                    ),
                   ),
                 ],
                 if (widget.completedAt != null) ...[
                   const SizedBox(height: 8),
                   KeyValueRow.text(
-                  label: 'Completed',
-                  valueText: _relativeOrFullDT(widget.completedAt),
+                    label: 'Completed',
+                    valueText: _relativeOrFullDT(widget.completedAt),
                   ),
                 ],
               ],
@@ -2117,12 +2170,18 @@ class _MaintenanceState extends State<MaintenanceDetails> {
                         ),
                     itemBuilder: (context, index) {
                       final request = _inventoryRequests[index];
-                      final itemName = request['item_name'] ?? request['name'] ?? 'Unknown Item';
+                      final itemName =
+                          request['item_name'] ??
+                          request['name'] ??
+                          'Unknown Item';
                       final quantity =
                           request['quantity_requested'] ??
                           request['quantity'] ??
                           0;
-                      final stockQuantity = request['stock_quantity'] ?? request['available_stock'] ?? 0;
+                      final stockQuantity =
+                          request['stock_quantity'] ??
+                          request['available_stock'] ??
+                          0;
                       final status = request['status'] ?? 'pending';
                       final unit = request['unit'] ?? '';
                       final category = request['category'] ?? '';
@@ -2176,10 +2235,18 @@ class _MaintenanceState extends State<MaintenanceDetails> {
                                       child: Row(
                                         children: [
                                           OutlinedButton(
-                                            onPressed: () => widget.onInventoryAction?.call(request, 'receive'),
+                                            onPressed:
+                                                () => widget.onInventoryAction
+                                                    ?.call(request, 'receive'),
                                             style: OutlinedButton.styleFrom(
-                                              side: const BorderSide(color: Color(0xFF059669)),
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                              side: const BorderSide(
+                                                color: Color(0xFF059669),
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
                                             ),
                                             child: const Text(
                                               'Receive',
@@ -2192,10 +2259,18 @@ class _MaintenanceState extends State<MaintenanceDetails> {
                                           ),
                                           const SizedBox(width: 8),
                                           ElevatedButton(
-                                            onPressed: () => widget.onInventoryAction?.call(request, 'request'),
+                                            onPressed:
+                                                () => widget.onInventoryAction
+                                                    ?.call(request, 'request'),
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0xFF005CE7),
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                              backgroundColor: const Color(
+                                                0xFF005CE7,
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
                                             ),
                                             child: const Text(
                                               'Request',
@@ -2331,41 +2406,80 @@ class _MaintenanceState extends State<MaintenanceDetails> {
           ffDivider(),
           const SizedBox(height: 8),
 
-          // ===== Assigned Staff =====
+          // Staff Details
+          if ((widget.assignedStaff ?? '').trim().isNotEmpty ||
+              (widget.assessment ?? '').trim().isNotEmpty ||
+              widget.assessedAt != null ||
+              (widget.staffAttachments ?? const <String>[]).isNotEmpty)
+            _Section(
+              title: "Staff Details",
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Avatar, Name, Department
+                  if ((widget.assignedStaff?.trim().isNotEmpty ?? false))
+                    _AvatarNameBlock(
+                      name: widget.assignedStaff!.trim(),
+                      departmentTag:
+                          (widget.staffDepartment?.trim().isNotEmpty ?? false)
+                              ? widget.staffDepartment!.trim()
+                              : null,
+                      photoUrl:
+                          (widget.staffPhotoUrl?.trim().isNotEmpty ?? false)
+                              ? widget.staffPhotoUrl!.trim()
+                              : null,
+                    ),
 
-          // Date Assessed
-          if (widget.assessedAt != null) ...[
-            SizedBox(height: 8),
-            KeyValueRow.text(
-              label: 'Date Assessed',
-              valueText: _relativeOrFullDT(widget.assessedAt),
-            ),
-          ],
+                  // ===== Assessment Section =====
+                  if (widget.assessedAt != null ||
+                      (widget.assessment?.trim().isNotEmpty ?? false)) ...[
+                    const SizedBox(height: 14),
+                    _Section(
+                      title: 'Assessment',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Date Assessed
+                          if (widget.assessedAt != null) ...[
+                            KeyValueRow.text(
+                              label: 'Date Assessed',
+                              valueText: _relativeOrFullDT(widget.assessedAt),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
 
-          if (hasAssigned) ...[
-            const _SectionTitle('Assigned Staff'),
-            SizedBox(height: 8),
-            // Show staff avatar/name if available
-            if ((widget.assignedStaff?.trim().isNotEmpty ?? false)) ...[
-              _AvatarNameBlock(
-                name: widget.assignedStaff!.trim(),
-                photoUrl: (widget.staffPhotoUrl?.trim().isNotEmpty ?? false)
-                    ? widget.staffPhotoUrl!.trim()
-                    : null,
+                          // Assessment Notes
+                          if ((widget.assessment ?? '').trim().isNotEmpty) ...[
+                            Text(
+                              widget.assessment!.trim(),
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  // Attachments
+                  if ((widget.staffAttachments ?? const <String>[])
+                      .isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _Section(
+                      title: "Assessment Attachments",
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children:
+                            (widget.staffAttachments ?? const <String>[])
+                                .map((u) => _thumb(u, h: 80, w: 140))
+                                .toList(),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
-            SizedBox(height: 14),
-          ],
-
-          if (widget.assessment?.trim().isNotEmpty ?? false) ...[
-            SizedBox(height: 10),
-            _SectionCard(
-              title: 'Assessment',
-              content: widget.assessment!.trim(),
-              padding: EdgeInsets.all(14),
-              hideIfEmpty: false,
             ),
-          ],
 
           SizedBox(height: 14),
 
@@ -2868,7 +2982,7 @@ class InventoryDetailsScreen extends StatelessWidget {
           title: 'Request Item Details',
           child: Column(
             children: [
-                if (_isNotEmpty(itemId))
+              if (_isNotEmpty(itemId))
                 KeyValueRow(label: 'Inventory ID', value: _kvText(itemId)),
               if (_isNotEmpty(requestQuantity)) const SizedBox(height: 8),
               if (_isNotEmpty(requestQuantity))

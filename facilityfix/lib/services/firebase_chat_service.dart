@@ -19,7 +19,10 @@ class FirebaseChatService {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random();
     return String.fromCharCodes(
-      Iterable.generate(8, (_) => chars.codeUnitAt(random.nextInt(chars.length)))
+      Iterable.generate(
+        8,
+        (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+      ),
     );
   }
 
@@ -33,7 +36,7 @@ class FirebaseChatService {
     try {
       // Check Firebase connection first
       await _ensureFirebaseConnection();
-      
+
       // Check if room already exists for this reference
       Query query = _firestore.collection('rooms');
 
@@ -49,17 +52,17 @@ class FirebaseChatService {
       }
 
       final existingRooms = await query.get();
-      
+
       if (existingRooms.docs.isNotEmpty) {
         final existingRoom = ChatRoom.fromFirestore(existingRooms.docs.first);
-        
+
         // Add current user to participants if not already present
         final currentUserId = participants.first;
         if (!existingRoom.participants.contains(currentUserId)) {
           await _firestore.collection('rooms').doc(existingRoom.id).update({
             'participants': FieldValue.arrayUnion([currentUserId]),
           });
-          
+
           // Return updated room
           return ChatRoom(
             id: existingRoom.id,
@@ -73,14 +76,14 @@ class FirebaseChatService {
             lastMessage: existingRoom.lastMessage,
           );
         }
-        
+
         return existingRoom;
       }
 
       // Create new room
       final roomCode = _generateRoomCode();
       final now = DateTime.now();
-      
+
       final roomData = ChatRoom(
         id: '', // Will be set by Firestore
         participants: participants,
@@ -92,8 +95,10 @@ class FirebaseChatService {
         updatedAt: now,
       );
 
-      final docRef = await _firestore.collection('rooms').add(roomData.toFirestore());
-      
+      final docRef = await _firestore
+          .collection('rooms')
+          .add(roomData.toFirestore());
+
       return ChatRoom(
         id: docRef.id,
         participants: participants,
@@ -107,7 +112,9 @@ class FirebaseChatService {
     } catch (e) {
       print('Error creating/getting room: $e');
       if (e.toString().contains('Unable to establish connection')) {
-        throw Exception('Firebase connection failed. Please check your internet connection and Firebase configuration.');
+        throw Exception(
+          'Firebase connection failed. Please check your internet connection and Firebase configuration.',
+        );
       }
       rethrow;
     }
@@ -117,13 +124,17 @@ class FirebaseChatService {
   Future<void> _ensureFirebaseConnection() async {
     try {
       // Try to perform a simple operation to test connection
-      await _firestore.collection('_connection_test').limit(1).get().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => throw Exception('Connection timeout'),
-      );
+      await _firestore
+          .collection('_connection_test')
+          .limit(1)
+          .get()
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => throw Exception('Connection timeout'),
+          );
     } catch (e) {
       print('Firebase connection test failed: $e');
-      
+
       // Check if we're in offline mode with persistence enabled
       try {
         final settings = _firestore.settings;
@@ -134,9 +145,11 @@ class FirebaseChatService {
       } catch (_) {
         // Settings not accessible
       }
-      
+
       // If we can't connect and no offline support, throw error
-      throw Exception('Firebase is not properly configured or connection failed. Please check your internet connection and Firebase setup. Error: $e');
+      throw Exception(
+        'Firebase is not properly configured or connection failed. Please check your internet connection and Firebase setup. Error: $e',
+      );
     }
   }
 
@@ -149,7 +162,7 @@ class FirebaseChatService {
     try {
       final profile = await AuthStorage.getProfile();
       final userId = profile?['uid'] ?? profile?['user_id'] ?? '';
-      
+
       if (userId.isEmpty) {
         throw Exception('User not authenticated');
       }
@@ -206,10 +219,10 @@ class FirebaseChatService {
         .orderBy('timestamp', descending: false)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => ChatMessage.fromFirestore(doc))
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => ChatMessage.fromFirestore(doc))
+              .toList();
+        });
   }
 
   // Get user's chat rooms with real-time updates
@@ -220,20 +233,20 @@ class FirebaseChatService {
         .orderBy('updated_at', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => ChatRoom.fromFirestore(doc))
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => ChatRoom.fromFirestore(doc))
+              .toList();
+        });
   }
 
   // Get all chat rooms for tenant (filter by reference IDs only, not participants)
   Stream<List<ChatRoom>> getTenantRoomsStream({
     String? concernSlipId,
-    String? maintenanceId, 
+    String? maintenanceId,
     String? jobServiceId,
   }) {
     Query query = _firestore.collection('rooms');
-    
+
     if (concernSlipId != null) {
       query = query.where('concern_slip_id', isEqualTo: concernSlipId);
     } else if (maintenanceId != null) {
@@ -242,14 +255,11 @@ class FirebaseChatService {
       query = query.where('job_service_id', isEqualTo: jobServiceId);
     }
     // If no specific reference, get all rooms (no additional filter needed)
-    
-    return query
-        .orderBy('updated_at', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => ChatRoom.fromFirestore(doc))
-          .toList();
+
+    return query.orderBy('updated_at', descending: true).snapshots().map((
+      snapshot,
+    ) {
+      return snapshot.docs.map((doc) => ChatRoom.fromFirestore(doc)).toList();
     });
   }
 
@@ -260,10 +270,10 @@ class FirebaseChatService {
         .orderBy('updated_at', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => ChatRoom.fromFirestore(doc))
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => ChatRoom.fromFirestore(doc))
+              .toList();
+        });
   }
 
   // Join an existing room by reference ID
@@ -275,7 +285,7 @@ class FirebaseChatService {
     try {
       final profile = await AuthStorage.getProfile();
       final currentUserId = profile?['uid'] ?? profile?['user_id'] ?? '';
-      
+
       if (currentUserId.isEmpty) {
         throw Exception('User not authenticated');
       }
@@ -296,7 +306,7 @@ class FirebaseChatService {
         await _firestore.collection('rooms').doc(existingRoom.id).update({
           'participants': FieldValue.arrayUnion([currentUserId]),
         });
-        
+
         // Return updated room
         return ChatRoom(
           id: existingRoom.id,
@@ -322,14 +332,15 @@ class FirebaseChatService {
   Future<void> markMessagesAsRead(String roomId, String userId) async {
     try {
       final batch = _firestore.batch();
-      
-      final unreadMessages = await _firestore
-          .collection('rooms')
-          .doc(roomId)
-          .collection('messages')
-          .where('sent_by', isNotEqualTo: userId)
-          .where('is_read', isEqualTo: false)
-          .get();
+
+      final unreadMessages =
+          await _firestore
+              .collection('rooms')
+              .doc(roomId)
+              .collection('messages')
+              .where('sent_by', isNotEqualTo: userId)
+              .where('is_read', isEqualTo: false)
+              .get();
 
       for (final doc in unreadMessages.docs) {
         batch.update(doc.reference, {'is_read': true});
@@ -349,22 +360,23 @@ class FirebaseChatService {
         .where('participants', arrayContains: userId)
         .snapshots()
         .asyncMap((roomSnapshot) async {
-      int totalUnread = 0;
-      
-      for (final roomDoc in roomSnapshot.docs) {
-        final unreadSnapshot = await _firestore
-            .collection('rooms')
-            .doc(roomDoc.id)
-            .collection('messages')
-            .where('sent_by', isNotEqualTo: userId)
-            .where('is_read', isEqualTo: false)
-            .get();
-        
-        totalUnread += unreadSnapshot.docs.length;
-      }
-      
-      return totalUnread;
-    });
+          int totalUnread = 0;
+
+          for (final roomDoc in roomSnapshot.docs) {
+            final unreadSnapshot =
+                await _firestore
+                    .collection('rooms')
+                    .doc(roomDoc.id)
+                    .collection('messages')
+                    .where('sent_by', isNotEqualTo: userId)
+                    .where('is_read', isEqualTo: false)
+                    .get();
+
+            totalUnread += unreadSnapshot.docs.length;
+          }
+
+          return totalUnread;
+        });
   }
 
   // Get room by ID
@@ -442,9 +454,11 @@ class FirebaseChatService {
     try {
       // Test connection first
       await _ensureFirebaseConnection();
-      
+
       // Create composite indexes for better query performance
-      print('Firebase Chat collections initialized. Ensure these indexes are created in Firebase Console:');
+      print(
+        'Firebase Chat collections initialized. Ensure these indexes are created in Firebase Console:',
+      );
       print('1. Collection: rooms');
       print('   Fields: concern_slip_id (Ascending), updated_at (Descending)');
       print('2. Collection: rooms');
@@ -456,12 +470,94 @@ class FirebaseChatService {
       print('5. Collection: messages (subcollection of rooms)');
       print('   Fields: timestamp (Ascending)');
       print('6. Collection: messages (subcollection of rooms)');
-      print('   Fields: sent_by (Ascending), is_read (Ascending), timestamp (Ascending)');
-      
-      print('Also ensure Firestore Security Rules are properly configured for chat functionality.');
+      print(
+        '   Fields: sent_by (Ascending), is_read (Ascending), timestamp (Ascending)',
+      );
+
+      print(
+        'Also ensure Firestore Security Rules are properly configured for chat functionality.',
+      );
     } catch (e) {
       print('Error initializing chat collections: $e');
-      throw Exception('Chat initialization failed. Please check Firebase configuration.');
+      throw Exception(
+        'Chat initialization failed. Please check Firebase configuration.',
+      );
+    }
+  }
+
+  Future<int> getUnreadCountForReference({
+    String? concernSlipId,
+    String? maintenanceId,
+    String? jobServiceId,
+  }) async {
+    try {
+      final profile = await AuthStorage.getProfile();
+      final currentUserId = profile?['uid'] ?? profile?['user_id'] ?? '';
+
+      if (currentUserId.isEmpty) return 0;
+
+      // Find the room by reference
+      final room = await findRoomByReference(
+        concernSlipId: concernSlipId,
+        maintenanceId: maintenanceId,
+        jobServiceId: jobServiceId,
+      );
+
+      if (room == null) return 0;
+
+      // Get unread messages from this specific room
+      final unreadSnapshot =
+          await _firestore
+              .collection('rooms')
+              .doc(room.id)
+              .collection('messages')
+              .where('sent_by', isNotEqualTo: currentUserId)
+              .where('is_read', isEqualTo: false)
+              .get();
+
+      return unreadSnapshot.docs.length;
+    } catch (e) {
+      print('Error getting unread count for reference: $e');
+      return 0;
+    }
+  }
+
+  Stream<int> getUnreadCountStreamForReference({
+    String? concernSlipId,
+    String? maintenanceId,
+    String? jobServiceId,
+  }) async* {
+    try {
+      final room = await findRoomByReference(
+        concernSlipId: concernSlipId,
+        maintenanceId: maintenanceId,
+        jobServiceId: jobServiceId,
+      );
+
+      if (room == null) {
+        yield 0;
+        return;
+      }
+
+      final profile = await AuthStorage.getProfile();
+      final currentUserId = profile?['uid'] ?? profile?['user_id'] ?? '';
+
+      if (currentUserId.isEmpty) {
+        yield 0;
+        return;
+      }
+
+      yield* _firestore
+          .collection('rooms')
+          .doc(room.id)
+          .collection('messages')
+          .where('sent_by', isNotEqualTo: currentUserId)
+          .where('is_read', isEqualTo: false)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.length);
+    } catch (e) {
+      print('Error in unread count stream for reference: $e');
+      yield 0;
     }
   }
 }

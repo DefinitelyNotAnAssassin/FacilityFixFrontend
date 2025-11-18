@@ -114,6 +114,10 @@ class _ConcernSlipDetailDialogState extends State<ConcernSlipDetailDialog> {
     notesController.addListener(_revalidate);
     _initializeScheduleDate(); // Auto-populate schedule date
 
+    print('Task rawData keys: ${widget.task['rawData']?.keys.toList()}');
+    print('Attachments value: ${widget.task['rawData']?['attachments']}');
+    print('Full task keys: ${widget.task.keys.toList()}');
+
     // Load staff details when task is in an inspection-related state
     final norm = _normalizedStatus();
     if (norm == 'to inspect' || norm == 'inspected' || norm == 'in progress') {
@@ -874,6 +878,13 @@ class _ConcernSlipDetailDialogState extends State<ConcernSlipDetailDialog> {
           const SizedBox(height: 24),
           _buildAssessmentSection(),
         ],
+        if ((widget.task['rawData']?['attachments'] as List?)?.isNotEmpty ??
+            false) ...[
+          const SizedBox(height: 24),
+          Divider(color: Colors.grey[200], thickness: 1, height: 1),
+          const SizedBox(height: 24),
+          _buildTenantAttachmentsSection(),
+        ],
       ],
     );
   }
@@ -959,7 +970,21 @@ class _ConcernSlipDetailDialogState extends State<ConcernSlipDetailDialog> {
             Expanded(
               child: _buildDetailItem(
                 'REQUESTED BY',
-                widget.task['reported_by'] ?? 'N/A',
+                (() {
+                  final candidates = [
+                    widget.task['requested_by_name'],
+                    widget.task['requestedBy'],
+                    widget.task['requester_name'],
+                    widget.task['rawData']?['requested_by_name'],
+                    widget.task['rawData']?['requester_name'],
+                    widget.task['rawData']?['reported_by'],
+                  ];
+                  final name = candidates.firstWhere(
+                    (c) => c != null && c.toString().trim().isNotEmpty,
+                    orElse: () => null,
+                  );
+                  return name?.toString() ?? 'N/A';
+                })(),
               ),
             ),
             const SizedBox(width: 24),
@@ -1046,6 +1071,13 @@ class _ConcernSlipDetailDialogState extends State<ConcernSlipDetailDialog> {
           widget.task['description'] ?? 'No description available.',
           style: TextStyle(fontSize: 15, height: 1.6, color: Colors.grey[700]),
         ),
+        if ((widget.task['rawData']?['attachments'] as List?)?.isNotEmpty ??
+            false) ...[
+          const SizedBox(height: 24),
+          Divider(color: Colors.grey[200], thickness: 1, height: 1),
+          const SizedBox(height: 24),
+          _buildTenantAttachmentsSection(),
+        ],
       ],
     );
   }
@@ -1732,5 +1764,72 @@ class _ConcernSlipDetailDialogState extends State<ConcernSlipDetailDialog> {
         );
       }
     }
+  }
+
+  Widget _buildTenantAttachmentsSection() {
+    final attachments =
+        (widget.task['rawData']?['attachments'] as List?) ??
+        (widget.task['attachments'] as List?) ??
+        [];
+    if (attachments.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Tenant Attachments'),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children:
+              attachments
+                  .map((url) => _buildAttachmentThumb(url.toString()))
+                  .toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAttachmentThumb(String url) {
+    final isNetwork = url.startsWith('http');
+    final borderRadius = BorderRadius.circular(8);
+
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child:
+          isNetwork
+              ? Image.network(
+                url,
+                height: 120,
+                width: 160,
+                fit: BoxFit.cover,
+                errorBuilder:
+                    (context, error, stackTrace) =>
+                        _buildBrokenThumbPlaceholder(120, 160, borderRadius),
+              )
+              : Image.asset(
+                url,
+                height: 120,
+                width: 160,
+                fit: BoxFit.cover,
+                errorBuilder:
+                    (context, error, stackTrace) =>
+                        _buildBrokenThumbPlaceholder(120, 160, borderRadius),
+              ),
+    );
+  }
+
+  Widget _buildBrokenThumbPlaceholder(double h, double w, BorderRadius radius) {
+    return Container(
+      height: h,
+      width: w,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: radius,
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      alignment: Alignment.center,
+      child: Icon(Icons.broken_image, color: Colors.grey[400], size: 32),
+    );
   }
 }

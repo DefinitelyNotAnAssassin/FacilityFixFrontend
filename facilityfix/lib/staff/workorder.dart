@@ -88,6 +88,17 @@ class _WorkOrderPageState extends State<WorkOrderPage> {
                   statusToken = rawStatus.isNotEmpty ? rawStatus : 'pending';
                 }
 
+                final requestType =
+                    (request['request_type'] ?? '').toString().toLowerCase();
+                String resolutionType = '';
+                if (requestType.contains('job service')) {
+                  resolutionType = 'job_service';
+                } else if (requestType.contains('concern slip')) {
+                  resolutionType = 'concern_slip';
+                } else {
+                  resolutionType = 'work_order';
+                }
+
                 return {
                   'id': request['formatted_id'] ?? request['id'] ?? '',
                   'raw_id':
@@ -115,6 +126,7 @@ class _WorkOrderPageState extends State<WorkOrderPage> {
                   'location': request['location'] ?? '',
                   'raw_status': request['status'] ?? 'pending',
                   'job_service_id': request['job_service_id'] ?? '',
+                  'resolution_type': resolutionType,
                 };
               }).toList();
           _isLoading = false;
@@ -480,6 +492,7 @@ class _WorkOrderPageState extends State<WorkOrderPage> {
       requestTypeTag: r['request_type'] ?? 'Concern Slip',
       assignedStaff: r['assigned_staff'],
       staffDepartment: r['staff_department'],
+      resolutionType: r['resolution_type'],
       onTap: () {
         // Extract the raw ID from the formatted ID or use the ID directly
         final requestId = r['raw_id'] ?? r['id'] ?? '';

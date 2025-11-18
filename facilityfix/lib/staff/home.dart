@@ -921,7 +921,7 @@ class _HomeState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: CustomAppBar(
-        title: 'Repair Tasks',
+        title: 'Home',
         leading: IconButton(
           icon: CircleAvatar(
             backgroundColor: const Color(0xFF005CE7),

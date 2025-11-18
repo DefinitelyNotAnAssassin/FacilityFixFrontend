@@ -3,19 +3,16 @@ import 'package:facilityfix/config/env.dart';
 import 'package:facilityfix/services/api_services.dart';
 import 'package:facilityfix/services/auth_storage.dart';
 import 'package:facilityfix/services/chat_helper.dart';
-import 'package:facilityfix/staff/announcement.dart';
-import 'package:facilityfix/staff/calendar.dart';
-import 'package:facilityfix/staff/home.dart';
-import 'package:facilityfix/staff/inventory.dart';
-import 'package:facilityfix/staff/workorder.dart';
-import 'package:facilityfix/staff/form/assessment_form.dart';
-import 'package:facilityfix/staff/view_details/concern_slip.dart';
 import 'package:facilityfix/widgets/view_details.dart';
 import 'package:facilityfix/utils/ui_format.dart';
 import 'package:flutter/material.dart';
 import 'package:facilityfix/widgets/app&nav_bar.dart';
 import 'package:facilityfix/widgets/buttons.dart' as fx;
 import 'package:facilityfix/widgets/modals.dart';
+import 'package:facilityfix/tenant/announcement.dart';
+import 'package:facilityfix/tenant/home.dart';
+import 'package:facilityfix/tenant/profile.dart';
+import 'package:facilityfix/tenant/repair_management.dart';
 import 'package:facilityfix/tenant/request_forms.dart';
 import 'package:facilityfix/tenant/view_details/concern_slip_details.dart';
 import 'package:facilityfix/tenant/view_details/workorder_details.dart';
@@ -24,14 +21,19 @@ class TenantJobServiceDetailPage extends StatefulWidget {
   final String jobServiceId;
   final String? initialTitle;
 
-  const TenantJobServiceDetailPage({super.key, required this.jobServiceId, this.initialTitle});
+  const TenantJobServiceDetailPage({
+    super.key,
+    required this.jobServiceId,
+    this.initialTitle,
+  });
 
   @override
   State<TenantJobServiceDetailPage> createState() =>
       _TenantJobServiceDetailPageState();
 }
 
-class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage> {
+class _TenantJobServiceDetailPageState
+    extends State<TenantJobServiceDetailPage> {
   int _selectedIndex = 1;
   bool _isLoading = true;
   bool _hasError = false;
@@ -47,7 +49,7 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
   // Form state
   String _selectedStatus = 'pending';
   bool _isSubmittingStatus = false;
-  
+
   // On Hold state
   Map<String, dynamic>? holdMeta;
 
@@ -75,7 +77,8 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     super.initState();
     // Ensure we have a valid default status
     if (!_statusOptions.contains(_selectedStatus)) {
-      _selectedStatus = _statusOptions.isNotEmpty ? _statusOptions.first : 'pending';
+      _selectedStatus =
+          _statusOptions.isNotEmpty ? _statusOptions.first : 'pending';
     }
     _loadJobServiceData();
     _loadCurrentUser();
@@ -103,8 +106,7 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     });
 
     try {
-      // Use staff role for API service
-      final apiService = APIService(roleOverride: AppRole.staff);
+      final apiService = APIService(roleOverride: AppRole.tenant);
       final data = await apiService.getJobServiceById(widget.jobServiceId);
 
       // Enrich data with user names if we have user IDs
@@ -148,8 +150,9 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
           }
         }
 
-        final DateTimeRange? scheduleRange =
-            UiDateUtils.parseRange(scheduleAvailabilityStr);
+        final DateTimeRange? scheduleRange = UiDateUtils.parseRange(
+          scheduleAvailabilityStr,
+        );
         if (scheduleRange != null) {
           data['schedule_availability'] = scheduleRange;
         }
@@ -167,7 +170,7 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
           _selectedStatus = currentStatus;
           _isLoading = false;
         });
-        
+
         // Debug logging
         print('[JobService] Available data fields:');
         print('  id: ${data['id']}');
@@ -189,7 +192,6 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
         print('  category: ${data['category']}');
         print('  department: ${data['department']}');
         print('  staff_department: ${data['staff_department']}');
-        print('\n[JobService] ALL data keys: ${data.keys.toList()}');
       }
     } catch (e) {
       if (mounted) {
@@ -215,7 +217,10 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     }
   }
 
-  Future<void> _enrichWithUserNames(Map<String, dynamic> data, APIService apiService) async {
+  Future<void> _enrichWithUserNames(
+    Map<String, dynamic> data,
+    APIService apiService,
+  ) async {
     try {
       // Fetch requested_by name if we have the ID but not the name
       if (data.containsKey('requested_by') &&
@@ -228,7 +233,9 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
           final firstName = userData['first_name'] ?? '';
           final lastName = userData['last_name'] ?? '';
           data['requested_by_name'] = '$firstName $lastName'.trim();
-          print('[DEBUG] Set requested_by_name to: ${data['requested_by_name']}');
+          print(
+            '[DEBUG] Set requested_by_name to: ${data['requested_by_name']}',
+          );
         }
       }
 
@@ -277,11 +284,12 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RequestForm(
-          requestType: 'Job Service',
-          concernSlipId: csId,
-          returnToCallerOnSuccess: true,
-        ),
+        builder:
+            (context) => RequestForm(
+              requestType: 'Job Service',
+              concernSlipId: csId,
+              returnToCallerOnSuccess: true,
+            ),
       ),
     );
 
@@ -289,7 +297,8 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     // while remaining backwards-compatible with older raw result maps.
     if (mounted && result is Map<String, dynamic>) {
       String? jsId;
-      if (result.containsKey('resource_type') && result.containsKey('resource_id')) {
+      if (result.containsKey('resource_type') &&
+          result.containsKey('resource_id')) {
         final rt = result['resource_type']?.toString() ?? '';
         final rid = result['resource_id']?.toString() ?? '';
         if (rt == 'job_service' && rid.isNotEmpty) jsId = rid;
@@ -297,16 +306,18 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
       }
 
       // Backwards compatibility: check legacy keys
-      jsId ??= result['job_service_id']?.toString()
-          ?? result['id']?.toString()
-          ?? result['formatted_id']?.toString();
+      jsId ??=
+          result['job_service_id']?.toString() ??
+          result['id']?.toString() ??
+          result['formatted_id']?.toString();
 
       if (jsId != null && jsId.isNotEmpty) {
         // Navigate directly to the Job Service details page
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => TenantJobServiceDetailPage(jobServiceId: jsId!),
+            builder:
+                (context) => TenantJobServiceDetailPage(jobServiceId: jsId!),
           ),
         );
         return;
@@ -322,33 +333,40 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RequestForm(
-          requestType: 'Work Order',
-          concernSlipId: csId,
-          returnToCallerOnSuccess: true,
-        ),
+        builder:
+            (context) => RequestForm(
+              requestType: 'Work Order',
+              concernSlipId: csId,
+              returnToCallerOnSuccess: true,
+            ),
       ),
     );
 
     // Accept canonical return shape and legacy maps
     if (mounted && result is Map<String, dynamic>) {
       String? woId;
-      if (result.containsKey('resource_type') && result.containsKey('resource_id')) {
+      if (result.containsKey('resource_type') &&
+          result.containsKey('resource_id')) {
         final rt = result['resource_type']?.toString() ?? '';
         final rid = result['resource_id']?.toString() ?? '';
         if (rt == 'work_order' && rid.isNotEmpty) woId = rid;
       }
 
-      woId ??= result['work_order_id']?.toString()
-          ?? result['id']?.toString()
-          ?? result['formatted_id']?.toString();
+      woId ??=
+          result['work_order_id']?.toString() ??
+          result['id']?.toString() ??
+          result['formatted_id']?.toString();
 
       if (woId != null && woId.isNotEmpty) {
         // Navigate directly to the Work Order details page
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => WorkOrderDetailsPage(workOrderId: woId!, selectedTabLabel: ''),
+            builder:
+                (context) => WorkOrderDetailsPage(
+                  workOrderId: woId!,
+                  selectedTabLabel: '',
+                ),
           ),
         );
         return;
@@ -364,8 +382,7 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
       const HomePage(),
       const WorkOrderPage(),
       const AnnouncementPage(),
-      const CalendarPage(),
-      const InventoryPage(),
+      const ProfilePage(),
     ];
     if (index != _selectedIndex) {
       Navigator.pushReplacement(
@@ -406,7 +423,7 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     });
 
     try {
-      final apiService = APIService(roleOverride: AppRole.staff);
+      final apiService = APIService(roleOverride: AppRole.tenant);
       final updated = await apiService.updateJobServiceStatus(
         jobServiceId: widget.jobServiceId,
         status: newStatus,
@@ -449,14 +466,16 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     // Show confirmation dialog first
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => CustomPopup(
-        title: 'Complete Job Service',
-        message: 'Are you sure you want to mark this job service as completed? This action cannot be undone.',
-        primaryText: 'Complete',
-        secondaryText: 'Cancel',
-        onPrimaryPressed: () => Navigator.of(context).pop(true),
-        onSecondaryPressed: () => Navigator.of(context).pop(false),
-      ),
+      builder:
+          (_) => CustomPopup(
+            title: 'Complete Job Service',
+            message:
+                'Are you sure you want to mark this job service as completed? This action cannot be undone.',
+            primaryText: 'Complete',
+            secondaryText: 'Cancel',
+            onPrimaryPressed: () => Navigator.of(context).pop(true),
+            onSecondaryPressed: () => Navigator.of(context).pop(false),
+          ),
     );
 
     if (confirmed != true) return;
@@ -464,25 +483,27 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     setState(() => _isSubmittingStatus = true);
 
     try {
-      final apiService = APIService(roleOverride: AppRole.staff);
+      // Use tenant role for completing job service
+      final apiService = APIService(roleOverride: AppRole.tenant);
       await apiService.completeJobService(widget.jobServiceId);
 
       if (mounted) {
         setState(() => _isSubmittingStatus = false);
-        
+
         // Show success dialog
         showDialog(
           context: context,
-          builder: (_) => CustomPopup(
-            title: 'Success',
-            message: 'Job service has been marked as completed.',
-            primaryText: 'OK',
-            onPrimaryPressed: () {
-              Navigator.of(context).pop();
-              // Refresh the job service data
-              _loadJobServiceData();
-            },
-          ),
+          builder:
+              (_) => CustomPopup(
+                title: 'Success',
+                message: 'Job service has been marked as completed.',
+                primaryText: 'OK',
+                onPrimaryPressed: () {
+                  Navigator.of(context).pop();
+                  // Refresh the job service data
+                  _loadJobServiceData();
+                },
+              ),
         );
       }
     } catch (e) {
@@ -539,27 +560,33 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Request'),
-        content: const Text('Are you sure you want to delete this request? This action cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _deleteJobService();
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Request'),
+            content: const Text(
+              'Are you sure you want to delete this request? This action cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _deleteJobService();
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
   Future<void> _deleteJobService() async {
     try {
-      final apiService = APIService(roleOverride: AppRole.staff);
+      final apiService = APIService(roleOverride: AppRole.tenant);
       await apiService.deleteJobService(widget.jobServiceId);
 
       if (mounted) {
@@ -586,7 +613,7 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     }
   }
 
-  Future<void> _openStatusUpdateSheet() async {
+  void _openStatusUpdateSheet() async {
     if (_jobServiceData == null || _statusOptions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -597,9 +624,10 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
       return;
     }
 
-    String pendingStatus = _statusOptions.contains(_selectedStatus)
-        ? _selectedStatus
-        : _statusOptions.first;
+    String pendingStatus =
+        _statusOptions.contains(_selectedStatus)
+            ? _selectedStatus
+            : _statusOptions.first;
 
     _notesController.clear();
 
@@ -652,14 +680,17 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
                         labelText: 'Status',
                         border: OutlineInputBorder(),
                       ),
-                      items: _statusOptions
-                          .map(
-                            (status) => DropdownMenuItem<String>(
-                              value: status,
-                              child: Text(status.replaceAll('_', ' ').toUpperCase()),
-                            ),
-                          )
-                          .toList(),
+                      items:
+                          _statusOptions
+                              .map(
+                                (status) => DropdownMenuItem<String>(
+                                  value: status,
+                                  child: Text(
+                                    status.replaceAll('_', ' ').toUpperCase(),
+                                  ),
+                                ),
+                              )
+                              .toList(),
                       onChanged: (value) {
                         if (value == null) return;
                         setModalState(() => pendingStatus = value);
@@ -676,7 +707,8 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
                     ),
                     const SizedBox(height: 24),
                     fx.FilledButton(
-                      label: _isSubmittingStatus ? 'Updating...' : 'Update Status',
+                      label:
+                          _isSubmittingStatus ? 'Updating...' : 'Update Status',
                       backgroundColor: const Color(0xFF005CE7),
                       textColor: Colors.white,
                       withOuterBorder: false,
@@ -725,122 +757,9 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     }
   }
 
-  void _openChat() async {
-    if (_jobServiceData == null) return;
-    
-    final tenantId = _jobServiceData!['tenant_id']?.toString();
-    if (tenantId == null || tenantId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to start chat: Tenant information not available'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    await ChatHelper.navigateToJobServiceChat(
-      context: context,
-      jobServiceId: widget.jobServiceId,
-      isStaff: true,
-    );
-  }
-
-  Future<void> _onHoldPressed() async {
-    // Check if currently on hold
-    bool isOnHold = _jobServiceData?['status']?.toString().toLowerCase() == 'on_hold';
-
-    if (isOnHold) {
-      // Resume task - set status back to assigned
-      try {
-        await _updateJobServiceStatus('assigned', notes: 'Task resumed from on-hold status');
-        
-        setState(() {
-          holdMeta = null;
-        });
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to resume task: ${e.toString()}'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } else {
-      // Put on hold - show bottom sheet
-      final result = await showHoldSheet(context);
-      
-      if (result == null) return; // User cancelled
-      
-      try {
-        String notes = 'Reason: ${result.reason}';
-        if (result.note != null && result.note!.isNotEmpty) {
-          notes += '\nNotes: ${result.note}';
-        }
-        if (result.resumeAt != null) {
-          notes += '\nResume at: ${result.resumeAt}';
-        }
-        
-        await _updateJobServiceStatus('on_hold', notes: notes);
-        
-        setState(() {
-          holdMeta = {
-            'reason': result.reason,
-            'note': result.note,
-            'resumeAt': result.resumeAt,
-          };
-        });
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Task put on hold'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to put task on hold: ${e.toString()}'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  void _createAssessment() async {
-    if (_jobServiceData == null) return;
-
-    // Navigate to assessment form (simplified version without resolution type)
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AssessmentForm(
-          concernSlipId: widget.jobServiceId, // Use job service ID
-          concernSlipData: _jobServiceData, // Pass job service data for context
-          requestType: 'Job Service ${_jobServiceData!['formatted_id'] ?? _jobServiceData!['id'] ?? ''}',
-          showResolutionType: false, // Hide resolution type for job services
-        ),
-      ),
-    );
-
-    // Refresh data if assessment was submitted
-    if (result == true && mounted) {
-      await _loadJobServiceData();
-    }
-  }
-
   void _viewConcernSlip() {
     if (_jobServiceData == null) return;
-    
+
     final concernSlipId = _jobServiceData!['concern_slip_id'];
     if (concernSlipId == null || concernSlipId.toString().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -855,9 +774,10 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => StaffConcernSlipDetailPage(
-          concernSlipId: concernSlipId.toString(),
-        ),
+        builder:
+            (context) => TenantConcernSlipDetailPage(
+              concernSlipId: concernSlipId.toString(),
+            ),
       ),
     );
   }
@@ -870,140 +790,195 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
         leading: const BackButton(),
         title: 'Job Service Details',
         showMore: true,
-        showDelete: _jobServiceData != null && _isDeletableStatus(_jobServiceData!['status']),
+        showDelete:
+            _jobServiceData != null &&
+            _isDeletableStatus(_jobServiceData!['status']),
         onDeleteTap: _showDeleteDialog,
       ),
       body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _hasError
+        child:
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _hasError
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 64,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Color(0xFF6B7280),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading job service',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF374151),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _errorMessage,
+                        style: const TextStyle(
+                          fontSize: 14,
                           color: Color(0xFF6B7280),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error loading job service',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF374151),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _errorMessage,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF6B7280),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        fx.FilledButton(
-                          label: 'Retry',
-                          backgroundColor: const Color(0xFF005CE7),
-                          textColor: Colors.white,
-                          withOuterBorder: false,
-                          onPressed: _loadJobServiceData,
-                        ),
-                      ],
-                    ),
-                  )
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      fx.FilledButton(
+                        label: 'Retry',
+                        backgroundColor: const Color(0xFF005CE7),
+                        textColor: Colors.white,
+                        withOuterBorder: false,
+                        onPressed: _loadJobServiceData,
+                      ),
+                    ],
+                  ),
+                )
                 : SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-                    child: Column(
-                      children: [
-                        // Job Service Information
-                        if (_jobServiceData != null) ...[
-                          JobServiceDetails(
-                            // Basic Information
-                            // Use job_service_id or js_id if available, otherwise use formatted_id
-                            id: _jobServiceData!['job_service_id']?.toString() ?? 
-                                _jobServiceData!['js_id']?.toString() ?? 
-                                _jobServiceData!['formatted_id'] ?? 
-                                _jobServiceData!['id'] ?? '',
-                            formattedId: _jobServiceData!['formatted_id'],
-                            concernSlipId: _jobServiceData!['concern_slip_id']?.toString() ?? '',
-                            createdAt: _parseDateTime(_jobServiceData!['created_at']) ?? DateTime.now(),
-                            updatedAt: _parseDateTime(_jobServiceData!['updated_at']),
-                            requestTypeTag: _jobServiceData!['request_type'] ?? 'Job Service',
-                            priority: _jobServiceData!['priority'],
-                            statusTag: _jobServiceData!['status'] ?? 'pending',
-                            resolutionType: _jobServiceData!['resolution_type'],
-                            departmentTag: _jobServiceData!['category'],
-                            
-                            // Tenant / Requester - Use name fields, fallback to IDs
-                            requestedBy: _jobServiceData!['requested_by_name'] ?? 
-                                        _jobServiceData!['requested_by'] ?? '',
-                            unitId: _jobServiceData!['location'] ?? 
-                                     _jobServiceData!['unit_id'] ?? '',
-                            scheduleAvailability: _jobServiceData!['schedule_availability'] ??
-                                        _jobServiceData!['availability'] ??
-                                        _jobServiceData!['scheduled_date'],
-                            additionalNotes: _jobServiceData!['additional_notes'] ?? 
-                                            _jobServiceData!['description'] ?? 
-                                            _jobServiceData!['notes'],
-                            
-                            // Staff - Use assigned_to_name (enriched from getUserById)
-                            assignedStaff: _jobServiceData!['assigned_to_name'] ?? 
-                                          _jobServiceData!['assigned_to'],
-                            staffDepartment: _jobServiceData!['staff_department'],
-                            staffPhotoUrl: _jobServiceData!['staff_photo_url'],
-                            
-                            // Documentation
-                            startedAt: _parseDateTime(_jobServiceData!['started_at'] ?? _jobServiceData!['start_time']),
-                            completedAt: _parseDateTime(_jobServiceData!['completed_at'] ?? _jobServiceData!['end_time']),
-                            completionAt: _parseDateTime(_jobServiceData!['completion_at']),
-                            assessedAt: _parseDateTime(_jobServiceData!['assessed_at']),
-                            assessment: _jobServiceData!['assessment'] ?? _jobServiceData!['staff_assessment'],
-                            staffAttachments: _parseStringList(_jobServiceData!['staff_attachments'] ?? _jobServiceData!['attachments']),
-                            
-                            // Callbacks
-                            onViewConcernSlip: _viewConcernSlip,
-                            // Prefer server-provided title, fall back to the card title passed in when available
-                            title: (_jobServiceData!['title'] != null && _jobServiceData!['title'].toString().isNotEmpty)
-                                ? _jobServiceData!['title'].toString()
-                                : widget.initialTitle,
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+                  child: Column(
+                    children: [
+                      // Job Service Information
+                      if (_jobServiceData != null) ...[
+                        JobServiceDetails(
+                          // Basic Information
+                          // Use job_service_id or js_id if available, otherwise use formatted_id
+                          id:
+                              _jobServiceData!['job_service_id']?.toString() ??
+                              _jobServiceData!['js_id']?.toString() ??
+                              _jobServiceData!['formatted_id'] ??
+                              _jobServiceData!['id'] ??
+                              '',
+                          formattedId: _jobServiceData!['formatted_id'],
+                          concernSlipId:
+                              _jobServiceData!['concern_slip_id']?.toString() ??
+                              '',
+                          createdAt:
+                              _parseDateTime(_jobServiceData!['created_at']) ??
+                              DateTime.now(),
+                          updatedAt: _parseDateTime(
+                            _jobServiceData!['updated_at'],
                           ),
-                        ] else if (_fallbackConcernSlip != null) ...[
-                          // Show an action required panel when the job service is
-                          // missing but a concern slip exists that requires tenant action
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFE6EDF8)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Action required',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          requestTypeTag:
+                              _jobServiceData!['request_type'] ?? 'Job Service',
+                          priority: _jobServiceData!['priority'],
+                          statusTag: _jobServiceData!['status'] ?? 'pending',
+                          resolutionType: _jobServiceData!['resolution_type'],
+                          departmentTag: _jobServiceData!['category'],
+
+                          // Tenant / Requester - Use name fields, fallback to IDs
+                          requestedBy:
+                              _jobServiceData!['requested_by_name'] ??
+                              _jobServiceData!['requested_by'] ??
+                              '',
+                          unitId:
+                              _jobServiceData!['location'] ??
+                              _jobServiceData!['unit_id'] ??
+                              '',
+                          scheduleAvailability:
+                              _jobServiceData!['schedule_availability'] ??
+                              _jobServiceData!['availability'] ??
+                              _jobServiceData!['scheduled_date'],
+                          additionalNotes:
+                              _jobServiceData!['additional_notes'] ??
+                              _jobServiceData!['description'] ??
+                              _jobServiceData!['notes'],
+
+                          // Staff - Use assigned_to_name (enriched from getUserById)
+                          assignedStaff:
+                              _jobServiceData!['assigned_to_name'] ??
+                              _jobServiceData!['assigned_to'],
+                          staffDepartment: _jobServiceData!['staff_department'],
+                          staffPhotoUrl: _jobServiceData!['staff_photo_url'],
+
+                          // Documentation
+                          startedAt: _parseDateTime(
+                            _jobServiceData!['started_at'] ??
+                                _jobServiceData!['start_time'],
+                          ),
+                          completedAt: _parseDateTime(
+                            _jobServiceData!['completed_at'] ??
+                                _jobServiceData!['end_time'],
+                          ),
+                          completionAt: _parseDateTime(
+                            _jobServiceData!['completion_at'],
+                          ),
+                          assessedAt: _parseDateTime(
+                            _jobServiceData!['assessed_at'],
+                          ),
+                          assessment:
+                              _jobServiceData!['assessment'] ??
+                              _jobServiceData!['staff_assessment'],
+                          staffAttachments: _parseStringList(
+                            _jobServiceData!['staff_attachments'] ??
+                                _jobServiceData!['attachments'],
+                          ),
+
+                          // Callbacks
+                          onViewConcernSlip: _viewConcernSlip,
+                          // Prefer server-provided title, fall back to the card title passed in when available
+                          title:
+                              (_jobServiceData!['title'] != null &&
+                                      _jobServiceData!['title']
+                                          .toString()
+                                          .isNotEmpty)
+                                  ? _jobServiceData!['title'].toString()
+                                  : widget.initialTitle,
+                          isStaff: false,
+                        ),
+                      ] else if (_fallbackConcernSlip != null) ...[
+                        // Show an action required panel when the job service is
+                        // missing but a concern slip exists that requires tenant action
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE6EDF8)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Action required',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'This request has been inspected by staff and requires you to fill the next step. Please open the appropriate form to continue.',
-                                  style: const TextStyle(fontSize: 14, color: Color(0xFF374151)),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'This request has been inspected by staff and requires you to fill the next step. Please open the appropriate form to continue.',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF374151),
                                 ),
-                                const SizedBox(height: 12),
-                                Builder(builder: (ctx) {
+                              ),
+                              const SizedBox(height: 12),
+                              Builder(
+                                builder: (ctx) {
                                   // Determine which button(s) to show based on the
                                   // concern slip's resolution_type for clearer UX.
-                                  final resType = (_fallbackConcernSlip!['resolution_type']?.toString() ?? '').toLowerCase();
-                                  final showJS = resType.isEmpty || resType.contains('job') || resType.contains('job_service');
-                                  final showWO = resType.isEmpty || resType.contains('work') || resType.contains('work_permit') || resType.contains('work_order') || resType.contains('wop');
+                                  final resType =
+                                      (_fallbackConcernSlip!['resolution_type']
+                                                  ?.toString() ??
+                                              '')
+                                          .toLowerCase();
+                                  final showJS =
+                                      resType.isEmpty ||
+                                      resType.contains('job') ||
+                                      resType.contains('job_service');
+                                  final showWO =
+                                      resType.isEmpty ||
+                                      resType.contains('work') ||
+                                      resType.contains('work_permit') ||
+                                      resType.contains('work_order') ||
+                                      resType.contains('wop');
 
                                   final List<Widget> buttons = [];
                                   if (showJS) {
@@ -1011,95 +986,55 @@ class _TenantJobServiceDetailPageState extends State<TenantJobServiceDetailPage>
                                       Expanded(
                                         child: fx.FilledButton(
                                           label: 'Open Job Service Form',
-                                          backgroundColor: const Color(0xFF005CE7),
+                                          backgroundColor: const Color(
+                                            0xFF005CE7,
+                                          ),
                                           textColor: Colors.white,
                                           withOuterBorder: false,
-                                          onPressed: _createJobServiceFromConcernSlip,
+                                          onPressed:
+                                              _createJobServiceFromConcernSlip,
                                         ),
                                       ),
                                     );
                                   }
                                   if (showWO) {
-                                    if (buttons.isNotEmpty) buttons.add(const SizedBox(width: 12));
+                                    if (buttons.isNotEmpty)
+                                      buttons.add(const SizedBox(width: 12));
                                     buttons.add(
                                       Expanded(
                                         child: fx.OutlinedPillButton(
                                           label: 'Open Work Order Form',
                                           borderColor: const Color(0xFF005CE7),
-                                          foregroundColor: const Color(0xFF005CE7),
-                                          onPressed: _createWorkOrderFromConcernSlip,
+                                          foregroundColor: const Color(
+                                            0xFF005CE7,
+                                          ),
+                                          onPressed:
+                                              _createWorkOrderFromConcernSlip,
                                         ),
                                       ),
                                     );
                                   }
 
                                   return Row(children: buttons);
-                                }),
-                                const SizedBox(height: 8),
-                                TextButton(
-                                  onPressed: _viewConcernSlipFromFallback,
-                                  child: const Text('View Concern Slip'),
-                                ),
-                              ],
-                            ),
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton(
+                                onPressed: _viewConcernSlipFromFallback,
+                                child: const Text('View Concern Slip'),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ],
-                    ),
+                    ],
                   ),
+                ),
       ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Show On Hold and Create Assessment buttons if staff is assigned and no assessment exists
-          if (_jobServiceData != null &&
-              _jobServiceData!['assigned_to'] != null &&
-              _jobServiceData!['assessment'] == null &&
-              (_jobServiceData!['status']?.toString().toLowerCase() == 'assigned' || 
-               _jobServiceData!['status']?.toString().toLowerCase() == 'on_hold'))
-            SafeArea(
-              top: false,
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
-                ),
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: fx.OutlinedPillButton(
-                          label: _jobServiceData!['status']?.toString().toLowerCase() == 'on_hold'
-                              ? 'Resume Task'
-                              : 'On Hold',
-                          icon: _jobServiceData!['status']?.toString().toLowerCase() == 'on_hold'
-                              ? Icons.play_arrow
-                              : Icons.pause,
-                          borderColor: const Color(0xFF005CE7),
-                          foregroundColor: const Color(0xFF005CE7),
-                          onPressed: _onHoldPressed,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: fx.FilledButton(
-                          label: 'Create Assessment',
-                          backgroundColor: const Color(0xFF005CE7),
-                          textColor: Colors.white,
-                          withOuterBorder: false,
-                          onPressed: _createAssessment,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          // Tenants should not have access to these staff-only features
           NavBar(
             items: _navItems,
             currentIndex: _selectedIndex,

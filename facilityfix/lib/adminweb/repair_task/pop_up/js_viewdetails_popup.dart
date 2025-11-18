@@ -1105,7 +1105,9 @@ class _JobServiceConcernSlipDialogState
             Expanded(
               child: _buildDetailItem(
                 'SCHEDULE DATE',
-                _formatScheduleToDateTimeRange(task['schedule']),
+                selectedDate != null
+                    ? UiDateUtils.dateTimeRange(selectedDate!, selectedEndDate)
+                    : _formatScheduleToDateTimeRange(task['schedule']),
               ),
             ),
           ],

@@ -1,4 +1,5 @@
 import 'package:facilityfix/utils/ui_format.dart';
+import 'package:facilityfix/services/firebase_chat_service.dart';
 import 'package:facilityfix/widgets/tag.dart';
 import 'package:flutter/material.dart';
 
@@ -208,11 +209,7 @@ class AnnouncementCard extends StatelessWidget {
                       Row(
                         children: [
                           if (showChevron)
-                            Icon(
-                              Icons.chevron_right,
-                              color: accent,
-                              size: 22,
-                            ),
+                            Icon(Icons.chevron_right, color: accent, size: 22),
                           if (!isRead)
                             Container(
                               width: 8,
@@ -277,7 +274,6 @@ class AnnouncementCard extends StatelessWidget {
     );
   }
 }
-
 
 /// ----------------------------------------------------------------------------
 /// Lightweight style system for the card (accent bar & container tint)
@@ -862,6 +858,9 @@ class RepairCard extends StatelessWidget {
       );
     }
 
+    final concernSlipId = resolutionType == 'concern_slip' ? id : null;
+    final jobServiceId = resolutionType == 'job_service' ? id : null;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -902,7 +901,8 @@ class RepairCard extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 6,
                       children: [
-                        if (priorityTag != null && priorityTag!.trim().isNotEmpty)
+                        if (priorityTag != null &&
+                            priorityTag!.trim().isNotEmpty)
                           PriorityTag(priority: priorityTag!.trim()),
                         StatusTag(status: statusTag),
                       ],
@@ -933,7 +933,8 @@ class RepairCard extends StatelessWidget {
                 const SizedBox(height: 2),
 
                 // Unit or Location (optional)
-                if (unitId.trim().isNotEmpty || (location?.trim().isNotEmpty ?? false))
+                if (unitId.trim().isNotEmpty ||
+                    (location?.trim().isNotEmpty ?? false))
                   Row(
                     children: [
                       const Icon(
@@ -944,9 +945,9 @@ class RepairCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          (location?.trim().isNotEmpty ?? false) 
-                            ? location!.trim() 
-                            : unitId.trim(),
+                          (location?.trim().isNotEmpty ?? false)
+                              ? location!.trim()
+                              : unitId.trim(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -996,7 +997,12 @@ class RepairCard extends StatelessWidget {
                     leftCluster,
                     const Spacer(),
                     if (_shouldShowChat())
-                      IconPill(icon: Icons.chat_bubble_outline, onTap: onChatTap),
+                      IconPill(
+                        icon: Icons.chat_bubble_outline,
+                        onTap: onChatTap,
+                        concernSlipId: concernSlipId,
+                        jobServiceId: jobServiceId,
+                      ),
                   ],
                 ),
               ],
@@ -1009,18 +1015,25 @@ class RepairCard extends StatelessWidget {
 
   // ---- Helpers ----------------------------------------------------------------
 
-  // Check if chat should be shown (only for assigned, in progress, and on hold statuses)
-  // Chat is disabled for work permits (concern_slip)
+  // Check if chat should be shown (only for assigned, in progress, on hold, and to inspect statuses)
   bool _shouldShowChat() {
     if (onChatTap == null) return false;
-    
-    // Disable chat for work permits
-    final resType = (resolutionType ?? '').toLowerCase().trim();
-    if (resType == 'concern_slip') return false;
-    
-    // Only show chat for assigned, in progress, and on hold statuses
+
+    // Check if chat should be shown (only for assigned, in progress, on hold, and to inspect statuses)
+    // The status check is sufficient to determine if chat should be available
+
+    // Allow chat for these statuses
     final status = statusTag.toLowerCase().trim();
-    return status == 'assigned' || status == 'in progress' || status == 'on hold';
+    return status == 'assigned' ||
+        status == 'in progress' ||
+        status == 'on hold' ||
+        status == 'to inspect' ||
+        status == 'inspected' ||
+        status == 'to be inspect' ||
+        status == 'sent to client' ||
+        status == 'sent to tenant' ||
+        status == 'sent' ||
+        status == 'completed';
   }
 
   // Returns: "Work Order • ..." (kept as-is; only date logic changed per request)
@@ -1276,12 +1289,7 @@ class MaintenanceCard extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // Footer (no chat button for maintenance cards)
-                Row(
-                  children: [
-                    leftCluster,
-                    const Spacer(),
-                  ],
-                ),
+                Row(children: [leftCluster, const Spacer()]),
               ],
             ),
           ),
@@ -1303,7 +1311,6 @@ class MaintenanceCard extends StatelessWidget {
     return UiDateUtils.shortDate(dt);
   }
 }
-
 
 // Ui Helpers
 
@@ -1397,9 +1404,7 @@ class _AssigneeLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final double avatarSize = dense ? 34 : 34;
 
-    final widgets = <Widget>[
-      _buildAvatar(photoUrl, name, size: avatarSize),
-    ];
+    final widgets = <Widget>[_buildAvatar(photoUrl, name, size: avatarSize)];
 
     // Only add name text if showName is true
     if (showName) {
@@ -1619,33 +1624,100 @@ class Pill extends StatelessWidget {
 }
 
 /// Icon-only small pill (for chat)
-class IconPill extends StatelessWidget {
+class IconPill extends StatefulWidget {
   final IconData icon;
   final VoidCallback? onTap;
 
-  const IconPill({super.key, required this.icon, this.onTap});
+  final String? concernSlipId;
+  final String? maintenanceId;
+  final String? jobServiceId;
+
+  const IconPill({
+    super.key,
+    required this.icon,
+    this.onTap,
+    this.concernSlipId,
+    this.maintenanceId,
+    this.jobServiceId,
+  });
+
+  @override
+  State<IconPill> createState() => _IconPillState();
+}
+
+class _IconPillState extends State<IconPill> {
+  late Stream<int> _unreadStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _unreadStream = FirebaseChatService().getUnreadCountStreamForReference(
+      concernSlipId: widget.concernSlipId,
+      maintenanceId: widget.maintenanceId,
+      jobServiceId: widget.jobServiceId,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final enabled = onTap != null;
+    final enabled = widget.onTap != null;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Ink(
-        width: 40,
-        height: 32,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(enabled ? 1 : 0.7),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFFE4E7EC)),
-        ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: enabled ? const Color(0xFF101828) : const Color(0xFF98A2B3),
-        ),
-      ),
+    return StreamBuilder<int>(
+      stream: _unreadStream,
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data ?? 0;
+
+        return Stack(
+          children: [
+            InkWell(
+              onTap: widget.onTap,
+              borderRadius: BorderRadius.circular(999),
+              child: Ink(
+                width: 40,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(enabled ? 1 : 0.7),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFFE4E7EC)),
+                ),
+                child: Icon(
+                  widget.icon,
+                  size: 18,
+                  color:
+                      enabled
+                          ? const Color(0xFF101828)
+                          : const Color(0xFF98A2B3),
+                ),
+              ),
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: -6,
+                top: -6,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDC2626),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    unreadCount > 99 ? '99+' : unreadCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      height: 1.0,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
