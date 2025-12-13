@@ -35,15 +35,18 @@ class _SignUpState extends State<SignUp> {
 
   final firstNameController = TextEditingController();
   final lastNameController = TextEditingController();
-  final birthDateController = TextEditingController(); // UI-only text; sent to API as birth_date
-  final idController = TextEditingController();        // tenant building/unit
+  final birthDateController =
+      TextEditingController(); // UI-only text; sent to API as birth_date
+  final idController =
+      TextEditingController(); // tenant building/unit (format: 0701)
   final emailController = TextEditingController();
   final contactNumberController = TextEditingController();
   final passwordController = TextEditingController();
 
   // Staff department (renamed from classification)
   String? _selectedStaffDepartment;
-  final TextEditingController staffDepartmentOtherController = TextEditingController();
+  final TextEditingController staffDepartmentOtherController =
+      TextEditingController();
 
   bool _submitted = false;
   bool _loading = false;
@@ -60,8 +63,8 @@ class _SignUpState extends State<SignUp> {
   bool _obscurePassword = true;
 
   bool get _isTenant => widget.role.toLowerCase() == 'tenant';
-  bool get _isStaff  => widget.role.toLowerCase() == 'staff';
-  bool get _isAdmin  => widget.role.toLowerCase() == 'admin';
+  bool get _isStaff => widget.role.toLowerCase() == 'staff';
+  bool get _isAdmin => widget.role.toLowerCase() == 'admin';
 
   @override
   void initState() {
@@ -120,14 +123,14 @@ class _SignUpState extends State<SignUp> {
     _staffDeptErr = null;
 
     final first = firstNameController.text.trim();
-    final last  = lastNameController.text.trim();
-    final bday  = birthDateController.text.trim();
+    final last = lastNameController.text.trim();
+    final bday = birthDateController.text.trim();
     final email = emailController.text.trim();
     final contact = contactNumberController.text.trim();
-    final pass  = passwordController.text;
+    final pass = passwordController.text;
 
     if (first.isEmpty) _firstNameErr = 'First Name is required.';
-    if (last.isEmpty)  _lastNameErr  = 'Last Name is required.';
+    if (last.isEmpty) _lastNameErr = 'Last Name is required.';
 
     // Birthdate validation (YYYY-MM-DD, logical checks, >= 18yo)
     if (bday.isEmpty) {
@@ -146,7 +149,8 @@ class _SignUpState extends State<SignUp> {
           } else {
             int age = now.year - dt.year;
             final hadBirthday =
-                (now.month > dt.month) || (now.month == dt.month && now.day >= dt.day);
+                (now.month > dt.month) ||
+                (now.month == dt.month && now.day >= dt.day);
             if (!hadBirthday) age -= 1;
             if (age < 18) _birthDateErr = 'You must be at least 18 years old.';
           }
@@ -156,15 +160,43 @@ class _SignUpState extends State<SignUp> {
       }
     }
 
-    if (_isTenant && idController.text.trim().isEmpty) {
-      _tenantBuildingErr = 'Building & Unit No. is required.';
+    if (_isTenant) {
+      final raw = idController.text.trim();
+      // validation for pattern only; mapping to backend format occurs on submit
+      if (raw.isEmpty) {
+        _tenantBuildingErr = 'Floor and Unit No. is required.';
+      } else {
+        // Must be exactly 4 digits: first 2 digits floor (07-26), last 2 digits unit (01-11)
+        if (!RegExp(r'^\d{4}$').hasMatch(raw)) {
+          _tenantBuildingErr = 'Use 4 digits only (e.g., 0701).';
+        } else {
+          try {
+            final floor = int.parse(raw.substring(0, 2));
+            final unit = int.parse(raw.substring(2, 4));
+            final minFloor = 7;
+            final maxFloor = 26;
+            final minUnit = 1;
+            final maxUnit = 11; // floors may have 10 or 11 units
+            if (floor < minFloor || floor > maxFloor) {
+              _tenantBuildingErr =
+                  'Floor must be between 07 and 26 (units only on floors 7+).';
+            } else if (unit < minUnit || unit > maxUnit) {
+              _tenantBuildingErr = 'Unit must be between 01 and 11.';
+            }
+          } catch (_) {
+            _tenantBuildingErr = 'Enter a valid 4-digit floor+unit code.';
+          }
+        }
+      }
     }
 
     if (_isStaff) {
       final isOthers = _selectedStaffDepartment == 'Others';
-      if (_selectedStaffDepartment == null || _selectedStaffDepartment!.isEmpty) {
+      if (_selectedStaffDepartment == null ||
+          _selectedStaffDepartment!.isEmpty) {
         _staffDeptErr = 'Staff Department is required.';
-      } else if (isOthers && staffDepartmentOtherController.text.trim().isEmpty) {
+      } else if (isOthers &&
+          staffDepartmentOtherController.text.trim().isEmpty) {
         _staffDeptErr = 'Please specify your Staff Department.';
       }
     }
@@ -188,7 +220,8 @@ class _SignUpState extends State<SignUp> {
 
     _formKey.currentState?.validate();
     setState(() {});
-    final basicOk = _firstNameErr == null &&
+    final basicOk =
+        _firstNameErr == null &&
         _lastNameErr == null &&
         _birthDateErr == null &&
         _tenantBuildingErr == null &&
@@ -204,7 +237,8 @@ class _SignUpState extends State<SignUp> {
     if (email == null || email.isEmpty) return 'User';
     final at = email.indexOf('@');
     if (at > 0) {
-      final part = email.substring(0, at).replaceAll(RegExp(r'[._-]'), ' ').trim();
+      final part =
+          email.substring(0, at).replaceAll(RegExp(r'[._-]'), ' ').trim();
       if (part.isNotEmpty) return part;
     }
     return email;
@@ -239,13 +273,14 @@ class _SignUpState extends State<SignUp> {
 
     final api = APIService(roleOverride: _toAppRole(widget.role));
     final first = firstNameController.text.trim();
-    final last  = lastNameController.text.trim();
-    final bday  = birthDateController.text.trim(); // <-- birthDate value
+    final last = lastNameController.text.trim();
+    final bday = birthDateController.text.trim(); // <-- birthDate value
     final email = emailController.text.trim();
-    final pass  = passwordController.text;
-    final phone = contactNumberController.text.trim().isEmpty
-        ? null
-        : '+63${contactNumberController.text.trim()}';
+    final pass = passwordController.text;
+    final phone =
+        contactNumberController.text.trim().isEmpty
+            ? null
+            : '+63${contactNumberController.text.trim()}';
 
     try {
       Map<String, dynamic> reg;
@@ -259,9 +294,10 @@ class _SignUpState extends State<SignUp> {
           phoneNumber: phone,
         );
       } else if (_isStaff) {
-        final label = _selectedStaffDepartment == 'Others'
-            ? staffDepartmentOtherController.text.trim()
-            : (_selectedStaffDepartment ?? '');
+        final label =
+            _selectedStaffDepartment == 'Others'
+                ? staffDepartmentOtherController.text.trim()
+                : (_selectedStaffDepartment ?? '');
         reg = await api.registerStaff(
           firstName: first,
           lastName: last,
@@ -272,7 +308,8 @@ class _SignUpState extends State<SignUp> {
           phoneNumber: phone,
         );
       } else {
-        final buildingUnit = idController.text.trim();
+        final raw = idController.text.trim();
+        final buildingUnit = RegExp(r'^\d{4}$').hasMatch(raw) ? 'A-$raw' : raw;
         reg = await api.registerTenant(
           firstName: first,
           lastName: last,
@@ -327,7 +364,9 @@ class _SignUpState extends State<SignUp> {
       } else if (first.isNotEmpty || last.isNotEmpty) {
         finalFullName = '${first} ${last}'.trim();
       } else {
-        finalFullName = _fallbackFromEmail((loginRes['email'] ?? email).toString());
+        finalFullName = _fallbackFromEmail(
+          (loginRes['email'] ?? email).toString(),
+        );
       }
 
       final profile = <String, dynamic>{
@@ -342,7 +381,8 @@ class _SignUpState extends State<SignUp> {
       };
       await AuthStorage.saveProfile(profile);
 
-      final idToken = (loginRes['id_token'] ?? loginRes['token'] ?? '').toString();
+      final idToken =
+          (loginRes['id_token'] ?? loginRes['token'] ?? '').toString();
       if (idToken.isNotEmpty) await AuthStorage.saveToken(idToken);
 
       final role = (loginRes['role'] ?? widget.role).toString().toLowerCase();
@@ -361,7 +401,10 @@ class _SignUpState extends State<SignUp> {
       if (!mounted) return;
       final firstName = _firstNameFromProfile(profile);
       _snack('Welcome $firstName');
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => destination));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => destination),
+      );
     } catch (e) {
       _snack(e.toString());
     } finally {
@@ -437,17 +480,23 @@ class _SignUpState extends State<SignUp> {
                                   readOnly: true,
                                   onTap: _pickBirthDate,
                                   errorText: _birthDateErr,
-                                  prefixIcon: const Icon(Icons.calendar_today, color: Color(0xFF98A2B3)),
+                                  prefixIcon: const Icon(
+                                    Icons.calendar_today,
+                                    color: Color(0xFF98A2B3),
+                                  ),
                                 ),
 
                                 if (_isTenant)
                                   InputField(
-                                    label: 'Building & Unit No.',
-                                    hintText: 'e.g., Tower A – 10F – 10B',
+                                    label: 'Floor and Unit No.',
+                                    hintText: 'e.g., 0701 (floor 07, unit 01)',
                                     controller: idController,
                                     isRequired: true,
                                     errorText: _tenantBuildingErr,
-                                    prefixIcon: const Icon(Icons.location_city_outlined, color: Color(0xFF98A2B3)),
+                                    prefixIcon: const Icon(
+                                      Icons.location_city_outlined,
+                                      color: Color(0xFF98A2B3),
+                                    ),
                                   ),
 
                                 if (_isStaff) ...[
@@ -462,14 +511,18 @@ class _SignUpState extends State<SignUp> {
                                       'Others',
                                     ],
                                     value: _selectedStaffDepartment,
-                                    onChanged: (v) => setState(() {
-                                      _selectedStaffDepartment = v;
-                                      if (v != 'Others') _staffDeptErr = null;
-                                    }),
+                                    onChanged:
+                                        (v) => setState(() {
+                                          _selectedStaffDepartment = v;
+                                          if (v != 'Others')
+                                            _staffDeptErr = null;
+                                        }),
                                     isRequired: _submitted,
-                                    requiredMessage: 'Staff Department is required.',
+                                    requiredMessage:
+                                        'Staff Department is required.',
                                     hintText: 'Select department',
-                                    otherController: staffDepartmentOtherController,
+                                    otherController:
+                                        staffDepartmentOtherController,
                                   ),
                                   if (_staffDeptErr != null) ...[
                                     const SizedBox(height: 4),
@@ -493,7 +546,10 @@ class _SignUpState extends State<SignUp> {
                                   keyboardType: TextInputType.emailAddress,
                                   isRequired: true,
                                   errorText: _emailErr,
-                                  prefixIcon: const Icon(Icons.mail, color: Color(0xFF98A2B3)),
+                                  prefixIcon: const Icon(
+                                    Icons.mail,
+                                    color: Color(0xFF98A2B3),
+                                  ),
                                 ),
                                 InputField(
                                   label: 'Contact Number',
@@ -522,14 +578,24 @@ class _SignUpState extends State<SignUp> {
                                   isRequired: true,
                                   obscureText: _obscurePassword,
                                   errorText: _passwordErr,
-                                  prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF98A2B3)),
+                                  prefixIcon: const Icon(
+                                    Icons.lock_outline,
+                                    color: Color(0xFF98A2B3),
+                                  ),
                                   suffixIcon: Padding(
                                     padding: const EdgeInsets.only(right: 4),
                                     child: GestureDetector(
                                       behavior: HitTestBehavior.translucent,
-                                      onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                                      onTap:
+                                          () => setState(
+                                            () =>
+                                                _obscurePassword =
+                                                    !_obscurePassword,
+                                          ),
                                       child: Icon(
-                                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                        _obscurePassword
+                                            ? Icons.visibility_off
+                                            : Icons.visibility,
                                         color: const Color(0xFF818181),
                                       ),
                                     ),
@@ -555,24 +621,28 @@ class _SignUpState extends State<SignUp> {
                                   elevation: 0,
                                 ),
                                 onPressed: _loading ? null : _onSubmit,
-                                child: _loading
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                child:
+                                    _loading
+                                        ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
+                                          ),
+                                        )
+                                        : const Text(
+                                          'Sign Up',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
                                         ),
-                                      )
-                                    : const Text(
-                                        'Sign Up',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
                               ),
                             ),
                           ),

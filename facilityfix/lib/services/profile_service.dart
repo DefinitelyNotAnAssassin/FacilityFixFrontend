@@ -33,18 +33,15 @@ class ProfileService {
     bool forceRefresh = false,
   }) async {
     try {
-  
-
       print('[ProfileService] Fetching fresh profile data...');
-      
+
       // Fetch from API
       final profile = await _apiService.fetchCurrentUserProfile();
 
-      
       return profile;
     } catch (e) {
       print('[ProfileService] Error fetching profile: $e');
-      
+
       // Fallback to local storage
       try {
         final localProfile = await AuthStorage.getProfile();
@@ -55,7 +52,7 @@ class ProfileService {
       } catch (storageError) {
         print('[ProfileService] Error accessing local storage: $storageError');
       }
-      
+
       return null;
     }
   }
@@ -75,7 +72,7 @@ class ProfileService {
   }) async {
     try {
       print('[ProfileService] Updating user profile...');
-      
+
       final result = await _apiService.updateCurrentUserProfile(
         firstName: firstName,
         lastName: lastName,
@@ -149,9 +146,13 @@ class ProfileService {
     final id = profile['id']?.toString() ?? '';
     final uid = profile['uid']?.toString() ?? '';
 
-    return userId.isNotEmpty ? userId : 
-           staffId.isNotEmpty ? staffId : 
-           id.isNotEmpty ? id : uid;
+    return userId.isNotEmpty
+        ? userId
+        : staffId.isNotEmpty
+        ? staffId
+        : id.isNotEmpty
+        ? id
+        : uid;
   }
 
   /// Get user's role
@@ -177,7 +178,8 @@ class ProfileService {
 
     // Fallback to legacy single department fields
     final department = (profile['department']?.toString() ?? '').trim();
-    final staffDepartment = (profile['staff_department']?.toString() ?? '').trim();
+    final staffDepartment =
+        (profile['staff_department']?.toString() ?? '').trim();
 
     final result = <String>[];
     if (department.isNotEmpty) result.add(department);
@@ -216,27 +218,67 @@ class ProfileService {
     };
   }
 
+  /// Return building unit in floor/unit format (e.g., "0701" for floor 07, unit 01)
+  /// Strips the building letter prefix (e.g., "A-0701" becomes "0701")
+  String formatBuildingUnitDisplay(Map<String, dynamic>? profile) {
+    if (profile == null) return '';
+
+    final raw = profile['building_unit']?.toString() ?? '';
+
+    if (raw.isEmpty) return '';
+
+    // If format is "A-0701", extract just the "0701" part
+    if (raw.contains('-')) {
+      final parts = raw.split('-');
+      if (parts.length >= 2) {
+        final unitPart = parts[1].trim();
+        // Only return if it looks like a valid 4-digit floor+unit code
+        if (RegExp(r'^\d{4}$').hasMatch(unitPart)) {
+          return unitPart;
+        }
+      }
+    }
+
+    // If already in "0701" format, return as-is
+    if (RegExp(r'^\d{4}$').hasMatch(raw)) {
+      return raw;
+    }
+
+    // For other formats, return the raw value
+    return raw;
+  }
+
   /// Format phone number for display
   String formatPhoneNumber(String? phone) {
     if (phone == null || phone.isEmpty) return '';
-    
+
     // Remove +63 prefix if present
     if (phone.startsWith('+63')) {
       return phone.substring(3);
     }
-    
+
     return phone;
   }
 
   /// Format birth date for display
   String formatBirthDate(String? birthDate) {
     if (birthDate == null || birthDate.isEmpty) return '';
-    
+
     try {
       final date = DateTime.parse(birthDate);
       final months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       return '${months[date.month - 1]} ${date.day}, ${date.year}';
     } catch (e) {
@@ -267,7 +309,7 @@ class ProfileService {
     // Fallback calculation
     final requiredFields = ['first_name', 'last_name', 'email', 'role'];
     final optionalFields = ['phone_number', 'department', 'building_id'];
-    
+
     int completed = 0;
     for (final field in requiredFields) {
       if ((profile[field]?.toString() ?? '').isNotEmpty) completed++;
@@ -330,7 +372,8 @@ class ProfileService {
         final cacheTime = _downloadUrlCacheTime[imageUrl];
 
         if (cachedUrl != null && cacheTime != null) {
-          final minutesSinceCache = DateTime.now().difference(cacheTime).inMinutes;
+          final minutesSinceCache =
+              DateTime.now().difference(cacheTime).inMinutes;
           if (minutesSinceCache < 50) {
             print('[ProfileService] Using cached download URL');
             return NetworkImage(cachedUrl);
@@ -395,9 +438,7 @@ class ProfileService {
       return FileImage(localImageFile);
     }
 
-
     final storageRef = FirebaseStorage.instance.ref();
-    
 
     // 2. Check for cached authenticated URL
     final imageUrl = profile['profile_image_url']?.toString() ?? '';

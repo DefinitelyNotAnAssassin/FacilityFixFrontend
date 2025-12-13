@@ -10,6 +10,7 @@ import 'package:facilityfix/tenant/repair_management.dart';
 import 'package:facilityfix/widgets/cards.dart';
 import 'package:facilityfix/widgets/app&nav_bar.dart';
 import 'package:facilityfix/services/auth_storage.dart';
+import 'package:facilityfix/services/profile_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -207,15 +208,15 @@ class _HomeState extends State<HomePage> {
     final photoUrl = (profile['photo_url'] ?? '').toString().trim();
 
     // ---- Building Unit (snake_case only, no formatting) ----
-    final buildingUnit = (profile['building_unit'] ?? '').toString().trim();
-    final formattedUnit = buildingUnit.isNotEmpty ? buildingUnit : '—';
+    final formattedUnit = ProfileService().formatBuildingUnitDisplay(profile);
+    final displayUnit = formattedUnit.isNotEmpty ? formattedUnit : '—';
 
     if (mounted) {
       setState(() {
         _userName = firstName.isNotEmpty ? firstName : 'User';
         _fullName = fullNameValue.isNotEmpty ? fullNameValue : 'User';
         _photoUrl = photoUrl.isNotEmpty ? photoUrl : null;
-        _unitLabel = formattedUnit; // ✅ show raw building_unit only
+        _unitLabel = displayUnit;
       });
     }
   }

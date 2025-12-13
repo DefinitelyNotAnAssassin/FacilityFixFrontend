@@ -9,7 +9,7 @@ class LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const Color brand = Color(0xFF005CE7); // keeps your existing blue
-    final Color bg    = brand.withOpacity(0.06);
+    final Color bg = brand.withOpacity(0.06);
     final BorderRadius radius = BorderRadius.circular(12);
 
     return Semantics(
@@ -99,9 +99,7 @@ class _PasswordInputFieldState extends State<PasswordInputField> {
           onTap: _toggleVisibility,
           child: Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: Icon(
-              _obscureText ? Icons.visibility_off : Icons.visibility,
-            ),
+            child: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
           ),
         ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -144,7 +142,7 @@ class SettingsOption extends StatelessWidget {
                 ),
                 child: Icon(icon, size: 20, color: const Color(0xFF4B5563)),
               ),
-              const SizedBox(width: 10),// ← spacing fixed to 16 px
+              const SizedBox(width: 10), // ← spacing fixed to 16 px
               Expanded(
                 child: Text(
                   text,
@@ -155,8 +153,7 @@ class SettingsOption extends StatelessWidget {
                   ),
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Color(0xFF9CA3AF)),
+              const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
             ],
           ),
         ),
@@ -164,7 +161,6 @@ class SettingsOption extends StatelessWidget {
     );
   }
 }
-
 
 /// Card section with optional trailing widget (e.g., edit icon)
 class SectionCard extends StatelessWidget {
@@ -197,9 +193,12 @@ class SectionCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   if (title != null)
-                    Text(title!,
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      title!,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   if (trailing != null) trailing!,
                 ],
               ),
@@ -231,60 +230,44 @@ class ProfileInfoWidget extends StatelessWidget {
   String _getInitials(String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return 'U';
-
     final parts = trimmed.split(RegExp(r'\s+'));
-    if (parts.isEmpty) return 'U';
-
-    if (parts.length == 1) {
-      return parts[0].substring(0, 1).toUpperCase();
-    }
-
-    return '${parts[0].substring(0, 1)}${parts[1].substring(0, 1)}'.toUpperCase();
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return (parts.first[0] + parts[1][0]).toUpperCase();
   }
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
     final initials = _getInitials(fullName);
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        // Avatar with camera badge
         Stack(
           clipBehavior: Clip.none,
           children: [
-            InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onTap,
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF6AA9FF), Color(0xFF7CE3FF)],
-                  ),
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF7C3AED), Color(0xFF2563EB)],
                 ),
-                child: CircleAvatar(
-                  radius: 44,
-                  backgroundColor: Colors.white,
-                  child: profileImage != null
-                      ? CircleAvatar(
-                          radius: 40,
-                          backgroundImage: profileImage,
-                        )
-                      : CircleAvatar(
-                          radius: 40,
-                          backgroundColor: const Color(0xFF005CE7),
-                          child: Text(
-                            initials,
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
+                shape: BoxShape.circle,
+              ),
+              child: CircleAvatar(
+                radius: 28,
+                backgroundColor: Colors.white,
+                backgroundImage: profileImage,
+                child:
+                    profileImage == null
+                        ? Text(
+                          initials,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                        ),
-                ),
+                        )
+                        : null,
               ),
             ),
             Positioned(
@@ -320,14 +303,19 @@ class ProfileInfoWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(fullName,
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  )),
+              Text(
+                fullName,
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(staffId,
-                  style: textTheme.bodyMedium
-                      ?.copyWith(color: const Color(0xFF6B7280))),
+              Text(
+                staffId,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF6B7280),
+                ),
+              ),
             ],
           ),
         ),
@@ -335,7 +323,6 @@ class ProfileInfoWidget extends StatelessWidget {
     );
   }
 }
-
 
 // Display-only row for Personal Details
 class DetailRow extends StatelessWidget {
@@ -376,8 +363,18 @@ String formatPrettyFromString(String value) {
 
 String formatPretty(DateTime dt) {
   const months = [
-    'January','February','March','April','May','June',
-    'July','August','September','October','November','December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
   return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
 }
@@ -390,16 +387,30 @@ DateTime? tryParseYMD(String s) {
     final m = int.parse(parts[1]);
     final d = int.parse(parts[2]);
     return DateTime(y, m, d);
-  } catch (_) { return null; }
+  } catch (_) {
+    return null;
+  }
 }
 
 DateTime? tryParsePretty(String s) {
   try {
-    final match = RegExp(r'^\s*([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})\s*$').firstMatch(s);
+    final match = RegExp(
+      r'^\s*([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})\s*$',
+    ).firstMatch(s);
     if (match == null) return null;
     const months = {
-      'january':1,'february':2,'march':3,'april':4,'may':5,'june':6,
-      'july':7,'august':8,'september':9,'october':10,'november':11,'december':12,
+      'january': 1,
+      'february': 2,
+      'march': 3,
+      'april': 4,
+      'may': 5,
+      'june': 6,
+      'july': 7,
+      'august': 8,
+      'september': 9,
+      'october': 10,
+      'november': 11,
+      'december': 12,
     };
     final mName = match.group(1)!.toLowerCase();
     final d = int.parse(match.group(2)!);
@@ -407,9 +418,10 @@ DateTime? tryParsePretty(String s) {
     final m = months[mName];
     if (m == null) return null;
     return DateTime(y, m, d);
-  } catch (_) { return null; }
+  } catch (_) {
+    return null;
+  }
 }
-
 
 // 1) Role enum
 enum UserRole { tenant, staff, admin }
@@ -417,11 +429,11 @@ enum UserRole { tenant, staff, admin }
 // 2) Edit result model
 class EditedProfileData {
   final String fullName;
-  final String birthDate;          
+  final String birthDate;
   final String userEmail;
   final String contactNumber;
-  final String? buildingUnitNo;    // tenant only
-  final String? staffDepartment;   // staff only
+  final String? buildingUnitNo; // tenant only
+  final String? staffDepartment; // staff only
 
   const EditedProfileData({
     required this.fullName,
@@ -436,13 +448,13 @@ class EditedProfileData {
 // 3) Edit Modal (enum-based)
 class EditProfileModal extends StatefulWidget {
   final String initialFullName;
-  final String initialBirthDate;      
+  final String initialBirthDate;
   final String initialUserEmail;
   final String initialContactNumber;
 
   // Optional seeds (used depending on role)
-  final String? initialBuildingUnitNo;   // used when role == tenant
-  final String? initialStaffDepartment;  // used when role == staff
+  final String? initialBuildingUnitNo; // used when role == tenant
+  final String? initialStaffDepartment; // used when role == staff
 
   final UserRole role;
 
@@ -472,29 +484,37 @@ class _EditProfileModalState extends State<EditProfileModal> {
 
   // Tenant-only
   TextEditingController? _unitCtrl;
+  String? _unitErr;
 
   // Staff-only (with "Others")
   static const List<String> _deptOptions = <String>[
-    'Plumbing', 'Maintenance', 'Electrical', 'Masonry', 'Others'
+    'Plumbing',
+    'Maintenance',
+    'Electrical',
+    'Masonry',
+    'Others',
   ];
   String? _deptValue;
   TextEditingController? _deptOtherCtrl;
 
   bool get _isTenant => widget.role == UserRole.tenant;
-  bool get _isStaff  => widget.role == UserRole.staff;
-  bool get _isAdmin  => widget.role == UserRole.admin;
+  bool get _isStaff => widget.role == UserRole.staff;
 
   @override
   void initState() {
     super.initState();
 
-    _nameCtrl  = TextEditingController(text: widget.initialFullName);
-    _birthCtrl = TextEditingController(text: formatPrettyFromString(widget.initialBirthDate));
+    _nameCtrl = TextEditingController(text: widget.initialFullName);
+    _birthCtrl = TextEditingController(
+      text: formatPrettyFromString(widget.initialBirthDate),
+    );
     _emailCtrl = TextEditingController(text: widget.initialUserEmail);
     _phoneCtrl = TextEditingController(text: widget.initialContactNumber);
 
     if (_isTenant) {
-      _unitCtrl = TextEditingController(text: (widget.initialBuildingUnitNo ?? '').trim());
+      _unitCtrl = TextEditingController(
+        text: (widget.initialBuildingUnitNo ?? '').trim(),
+      );
     }
 
     if (_isStaff) {
@@ -523,7 +543,8 @@ class _EditProfileModalState extends State<EditProfileModal> {
 
   Future<void> _pickBirthDate() async {
     DateTime initial = DateTime.now().subtract(const Duration(days: 365 * 21));
-    final parsed = tryParseYMD(_birthCtrl.text) ?? tryParsePretty(_birthCtrl.text);
+    final parsed =
+        tryParseYMD(_birthCtrl.text) ?? tryParsePretty(_birthCtrl.text);
     if (parsed != null) initial = parsed;
 
     final picked = await showDatePicker(
@@ -535,7 +556,9 @@ class _EditProfileModalState extends State<EditProfileModal> {
     );
 
     if (picked != null) {
-      setState(() => _birthCtrl.text = formatPretty(picked)); // "August 23, 2004"
+      setState(
+        () => _birthCtrl.text = formatPretty(picked),
+      ); // "August 23, 2004"
     }
   }
 
@@ -559,6 +582,64 @@ class _EditProfileModalState extends State<EditProfileModal> {
     if (_isTenant) {
       final t = _unitCtrl?.text.trim() ?? '';
       unitToReturn = t.isEmpty ? null : t;
+      // Validate 4-digit floor+unit (e.g., 0701)
+      if (unitToReturn != null) {
+        final raw = unitToReturn!;
+        // Accept either '0701' (4 digits) or 'A-0701'/'A-701' formats
+        String digits;
+        final fourDigitReg = RegExp(r'^\d{4}');
+        final buildingReg = RegExp(r'^[A-Za-z]-?\d{1,5}');
+
+        if (fourDigitReg.hasMatch(raw)) {
+          digits = raw.replaceAll(RegExp(r'\s+'), '').substring(0, 4);
+        } else if (buildingReg.hasMatch(raw)) {
+          final parts = raw.replaceAll(' ', '').split('-');
+          digits =
+              parts.length == 2
+                  ? parts[1]
+                  : parts[0].replaceAll(RegExp(r'^[A-Za-z]'), '');
+          if (digits.length < 4) digits = digits.padLeft(4, '0');
+        } else {
+          _unitErr = 'Building unit must be 4 digits (e.g., 0701) or A-0701';
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid building unit format')),
+          );
+          setState(() {});
+          return;
+        }
+
+        try {
+          final floor = int.parse(digits.substring(0, 2));
+          final unit = int.parse(digits.substring(2, 4));
+          final minFloor = 7;
+          final maxFloor = 26;
+          final minUnit = 1;
+          final maxUnit = 11;
+          if (floor < minFloor || floor > maxFloor) {
+            _unitErr = 'Floor must be between 07 and 26';
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(_unitErr!)));
+            setState(() {});
+            return;
+          }
+          if (unit < minUnit || unit > maxUnit) {
+            _unitErr = 'Unit must be between 01 and 11';
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(_unitErr!)));
+            setState(() {});
+            return;
+          }
+        } catch (_) {
+          _unitErr = 'Enter a valid 4-digit floor+unit code.';
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid building unit digits')),
+          );
+          setState(() {});
+          return;
+        }
+      }
     } else if (_isStaff) {
       if (_deptValue != null) {
         if (_deptValue == 'Others') {
@@ -666,6 +747,7 @@ class _EditProfileModalState extends State<EditProfileModal> {
                     hintText: 'e.g., Bldg 2 • Unit 7C',
                     isRequired: false,
                     readOnly: false,
+                    errorText: _unitErr,
                     prefixIcon: const Padding(
                       padding: EdgeInsets.all(8.0),
                       child: Icon(Icons.apartment_outlined),
@@ -684,16 +766,19 @@ class _EditProfileModalState extends State<EditProfileModal> {
                     isRequired: false,
                     // compact, same feel as your 36px text fields
                     isDense: true,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     prefixIcon: const Padding(
                       padding: EdgeInsets.all(8.0),
                       child: Icon(Icons.work, size: 18),
                     ),
                     // Let the dropdown render "Others" inline input itself
-                    otherController: _deptValue == 'Others'
-                        ? (_deptOtherCtrl ??= TextEditingController())
-                        : null,
+                    otherController:
+                        _deptValue == 'Others'
+                            ? (_deptOtherCtrl ??= TextEditingController())
+                            : null,
                     onChanged: (val) {
                       setState(() {
                         _deptValue = val;

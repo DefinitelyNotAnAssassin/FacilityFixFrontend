@@ -6,10 +6,10 @@ enum AppRole { tenant, staff, admin }
 class AppEnv {
   /// When testing on a physical device, set this to your laptop’s LAN IP.
   // static String? lanIp = 'https://lofty-bay-475013-v2-557829776689.europe-west1.run.app';
-  static String? lanIp = '192.168.1.15'; 
+  static String? lanIp = '192.168.18.10';
 
   //static const String _WEB_API = 'https://lofty-bay-475013-v2-557829776689.europe-west1.run.app';
-  static const String _WEB_API = 'http://192.168.1.15:8000';
+  static const String _WEB_API = 'http://192.168.18.10:8000';
 
   static const Map<AppRole, String> _webHosts = {
     AppRole.tenant: _WEB_API,
@@ -27,9 +27,9 @@ class AppEnv {
     // AppRole.tenant: 'https://lofty-bay-475013-v2-557829776689.europe-west1.run.app',
     // AppRole.staff: 'https://lofty-bay-475013-v2-557829776689.europe-west1.run.app',
     // AppRole.admin: 'https://lofty-bay-475013-v2-557829776689.europe-west1.run.app',
-    AppRole.tenant: 'http://192.168.1.15:8000',
-    AppRole.staff: 'http://192.168.1.15:8000',
-    AppRole.admin: 'http://192.168.1.15:8000',
+    AppRole.tenant: 'http://192.168.18.10:8000',
+    AppRole.staff: 'http://192.168.18.10:8000',
+    AppRole.admin: 'http://192.168.18.10:8000',
   };
 
   /// Default per-platform base URL (localhost for web/desktop, emulator loopback, etc.)

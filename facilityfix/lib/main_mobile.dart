@@ -10,29 +10,29 @@ import 'debug/firebase_debug.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     // Initialize Firebase with proper options
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('[FacilityFix] Firebase initialized successfully');
-    
+
     // Configure Firestore settings
     FirebaseConfig.configureFirestore();
-    
+
     // Test Firebase connection
     final isConnected = await FirebaseConfig.testConnection();
     if (isConnected) {
       print('[FacilityFix] Firebase connection verified');
-      
+
       // Initialize chat collections only if Firebase is working
-      await ChatHelper.initializeChat(); 
+      await ChatHelper.initializeChat();
       print('[FacilityFix] Chat initialized successfully');
     } else {
       print('[FacilityFix] Firebase connection failed');
       print('[FacilityFix] Chat features will be disabled');
-      
+
       // Run detailed diagnostics when connection fails
       print('[FacilityFix] Running Firebase diagnostics...');
       final diagnostics = await FirebaseDebugUtils.runDiagnostics();
@@ -71,7 +71,7 @@ class MyApp extends StatelessWidget {
         ),
         fontFamily: 'Inter',
       ),
-      // animated splash widget 
+      // animated splash widget
       home: SplashScreen(
         onDone: () {
           navigatorKey.currentState?.pushReplacement(

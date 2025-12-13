@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../popupwidgets/webforgotpassword_popup.dart';
 import '../../services/api_service_web.dart';
+import 'package:facilityfix/services/profile_service.dart';
 
 class UserProfileDialog extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -490,15 +491,15 @@ class _UserProfileDialogState extends State<UserProfileDialog> {
           const SizedBox(height: 20),
 
           // Building ID (if available)
-          if (rawUser['building_id'] != null ||
+          if ((rawUser['building_id'] != null && rawUser['unit_id'] != null) ||
               rawUser['building_unit'] != null)
             Column(
               children: [
                 _buildReadOnlyField(
                   'Building/Unit',
-                  rawUser['building_id'] ??
-                      rawUser['building_unit'] ??
-                      'Not specified',
+                  ProfileService().formatBuildingUnitDisplay(rawUser).isNotEmpty
+                      ? ProfileService().formatBuildingUnitDisplay(rawUser)
+                      : 'Not specified',
                 ),
                 const SizedBox(height: 20),
               ],

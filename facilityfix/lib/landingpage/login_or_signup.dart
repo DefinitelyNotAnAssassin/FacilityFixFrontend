@@ -70,11 +70,97 @@ class _LoginOrSignupState extends State<LoginOrSignup>
   }
 
   void _openSignUpModal(BuildContext context) {
-    showModalBottomSheet(
+    // Present a role selection sheet first before opening SignUp
+    showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const SignUp(role: 'tenant'),
+      builder:
+          (context) => Container(
+            height: 220,
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 8),
+                const Text(
+                  'Register as',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF005CE7),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF005CE7),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Future.delayed(const Duration(milliseconds: 120), () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => const SignUp(role: 'tenant'),
+                        );
+                      });
+                    },
+                    child: const Text(
+                      'Tenant',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(
+                        color: Color(0xFF005CE7),
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Future.delayed(const Duration(milliseconds: 120), () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => const SignUp(role: 'staff'),
+                        );
+                      });
+                    },
+                    child: const Text(
+                      'Staff',
+                      style: TextStyle(color: Color(0xFF005CE7)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
     );
   }
 
@@ -96,7 +182,10 @@ class _LoginOrSignupState extends State<LoginOrSignup>
             final scale = (sx < sy ? sx : sy);
 
             // Adjusted: slightly higher curve
-            const ovalLeft = -291.0, ovalTop = -200.0, ovalW = 974.0, ovalH = 722.0;
+            const ovalLeft = -291.0,
+                ovalTop = -200.0,
+                ovalW = 974.0,
+                ovalH = 722.0;
 
             // Logo resized and moved up slightly
             const logoLeft = 96.0, logoTop = 45.0, logoW = 200.0, logoH = 180.0;
@@ -187,7 +276,7 @@ class _LoginOrSignupState extends State<LoginOrSignup>
                   ),
                 ),
 
-                // 🔐 Buttons 
+                // 🔐 Buttons
                 Positioned(
                   left: 32 * sx,
                   right: 32 * sx,
@@ -231,7 +320,9 @@ class _LoginOrSignupState extends State<LoginOrSignup>
                           child: OutlinedButton(
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(
-                                  color: brandBlue, width: 1.5),
+                                color: brandBlue,
+                                width: 1.5,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
